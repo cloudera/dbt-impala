@@ -1,8 +1,8 @@
 
-{% macro dbt-impala__get_catalog(information_schema, schemas) -%}
+{% macro impala__get_catalog(information_schema, schemas) -%}
 
   {% set msg -%}
-    get_catalog not implemented for dbt-impala
+    get_catalog not implemented for impala
   {%- endset %}
 
   {{ exceptions.raise_compiler_error(msg) }}
