@@ -1,4 +1,4 @@
-Getting this running locally:
+To get the dbt-impala adapter to run locally, first install the following requirements. 
 
 Requirements:
 python3.8 or higher
