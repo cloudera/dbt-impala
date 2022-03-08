@@ -1,18 +1,20 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+import time
 import dbt.exceptions
 
 from dbt.adapters.base import Credentials
 from dbt.adapters.sql import SQLConnectionManager
 
-from typing import Optional
+from typing import Optional, Tuple, Any
 
-from dbt.contracts.connection import AdapterResponse
+from dbt.contracts.connection import Connection, AdapterResponse
+
+from dbt.events.functions import fire_event
+from dbt.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 
 from dbt.logger import GLOBAL_LOGGER as logger
-
-from dbt.contracts.connection import AdapterResponse
 
 import impala.dbapi
 
@@ -106,3 +108,45 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
     def rollback(self, *args, **kwargs):
         logger.debug("NotImplemented: rollback")
+
+    def add_query(
+        self,
+        sql: str,
+        auto_begin: bool = True,
+        bindings: Optional[Any] = None,
+        abridge_sql_log: bool = False
+    ) -> Tuple[Connection, Any]:
+        
+        print("[add_query]", sql, bindings)
+
+        connection = self.get_thread_connection()
+        if auto_begin and connection.transaction_open is False:
+            self.begin()
+        fire_event(ConnectionUsed(conn_type=self.TYPE, conn_name=connection.name))
+
+        with self.exception_handler(sql):
+            if abridge_sql_log:
+                log_sql = '{}...'.format(sql[:512])
+            else:
+                log_sql = sql
+
+            fire_event(SQLQuery(conn_name=connection.name, sql=log_sql))
+            pre = time.time()
+
+            cursor = connection.handle.cursor()
+
+            # paramstlye parameter is needed for the datetime object to be correctly qouted when
+            # running substitution query from impyla. this fix also depends on a patch for impyla:
+            # https://github.com/cloudera/impyla/pull/486
+            configuration = {}
+            configuration['paramstyle'] = 'format'
+            cursor.execute(sql, bindings, configuration)
+
+            fire_event(
+                SQLQueryStatus(
+                    status=str(self.get_response(cursor)),
+                    elapsed=round((time.time() - pre), 2)
+                )
+            )
+
+            return connection, cursor
