@@ -39,6 +39,20 @@
   ;
 {%- endmacro %}
 
+{% macro impala__create_view_as(relation, sql) -%}
+
+  {%- set sql_header = config.get('sql_header', none) -%}
+  {%- set backup = config.get('backup') -%}
+
+  {{ sql_header if sql_header is not none }}
+
+  create view
+    {{ relation.include(schema=True) }}
+  as
+    {{ sql }}
+  ;
+{%- endmacro %}
+
 {% macro impala__create_schema(relation) -%}
   {%- call statement('create_schema') -%}
     create schema if not exists {{ relation }}
