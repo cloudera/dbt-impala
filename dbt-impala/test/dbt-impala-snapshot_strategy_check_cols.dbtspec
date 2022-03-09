@@ -1,0 +1,15 @@
+
+# See https://github.com/dbt-labs/dbt-adapter-tests
+# for installation and use
+
+target:
+  type: impala
+  # Add CI credentials here, like:
+  host: localhost
+  port: 21050
+  dbname: s3test
+  schema: s3test
+  # username: root
+  # password: pass
+sequences:
+  test_dbt_snapshot_strategy_check_cols: snapshot_strategy_check_cols
