@@ -1,6 +1,8 @@
 from dbt.adapters.sql import SQLAdapter
 from dbt.adapters.impala import ImpalaConnectionManager
 
+import re
+
 from typing import List
 
 import agate
@@ -18,10 +20,19 @@ logger = AdapterLogger("Impala")
 LIST_SCHEMAS_MACRO_NAME = 'list_schemas'
 LIST_RELATIONS_MACRO_NAME = 'list_relations_without_caching'
 
+KEY_TABLE_OWNER = 'Owner'
+KEY_TABLE_STATISTICS = 'Statistics'
+
 class ImpalaAdapter(SQLAdapter):
     Relation = ImpalaRelation
     Column = ImpalaColumn
     ConnectionManager = ImpalaConnectionManager
+
+    INFORMATION_COLUMNS_REGEX = re.compile(
+        r"^ \|-- (.*): (.*) \(nullable = (.*)\b", re.MULTILINE)
+    INFORMATION_OWNER_REGEX = re.compile(r"^Owner: (.*)$", re.MULTILINE)
+    INFORMATION_STATISTICS_REGEX = re.compile(
+        r"^Statistics: (.*)$", re.MULTILINE)
 
     @classmethod
     def date_function(cls):
@@ -104,3 +115,94 @@ class ImpalaAdapter(SQLAdapter):
             relations.append(relation)
 
         return relations
+
+    def get_columns_in_relation(self, relation: Relation) -> List[ImpalaColumn]:
+        cached_relations = self.cache.get_relations(
+            relation.database, relation.schema)
+        cached_relation = next((cached_relation
+                                for cached_relation in cached_relations
+                                if str(cached_relation) == str(relation)),
+                               None)
+        columns = []
+        if cached_relation and cached_relation.information:
+            columns = self.parse_columns_from_information(cached_relation)
+
+        # execute the macro and parse the data
+        if not columns:
+            rows: List[agate.Row] = super().get_columns_in_relation(relation)
+            columns = self.parse_describe_extended(relation, rows)
+
+        return columns
+
+    def parse_describe_extended(
+            self,
+            relation: Relation,
+            raw_rows: List[agate.Row]
+    ) -> List[ImpalaColumn]:
+
+        # TODO: this method is largely from dbt-spark, sample test with impala works (test_dbt_base: base)
+        # need deeper testing 
+
+        # Convert the Row to a dict
+        dict_rows = [dict(zip(row._keys, row._values)) for row in raw_rows]
+        # Find the separator between the rows and the metadata provided
+        # by the DESCRIBE EXTENDED {{relation}} statement
+        pos = self.find_table_information_separator(dict_rows)
+
+        # Remove rows that start with a hash, they are comments
+        rows = [
+            row for row in raw_rows[0:pos]
+            if not row['name'].startswith('#') and not row['name'] == ''
+        ]
+        metadata = {
+            col['name']: col['type'] for col in raw_rows[pos + 1:]
+        }
+
+        raw_table_stats = metadata.get(KEY_TABLE_STATISTICS)
+        table_stats = ImpalaColumn.convert_table_stats(raw_table_stats)
+
+        return [ImpalaColumn(
+            table_database=None,
+            table_schema=relation.schema,
+            table_name=relation.name,
+            table_type=relation.type,
+            table_owner=str(metadata.get(KEY_TABLE_OWNER)),
+            table_stats=table_stats,
+            column=column['name'],
+            column_index=idx,
+            dtype=column['type'],
+        ) for idx, column in enumerate(rows)]
+
+    def parse_columns_from_information(
+            self, relation: ImpalaRelation
+    ) -> List[ImpalaColumn]:
+
+        # TODO: this method is largely from dbt-spark, sample test with impala works (test_dbt_base: base)
+        # need deeper testing
+
+        owner_match = re.findall(
+            self.INFORMATION_OWNER_REGEX, relation.information)
+        owner = owner_match[0] if owner_match else None
+        matches = re.finditer(
+            self.INFORMATION_COLUMNS_REGEX, relation.information)
+        columns = []
+        stats_match = re.findall(
+            self.INFORMATION_STATISTICS_REGEX, relation.information)
+        raw_table_stats = stats_match[0] if stats_match else None
+        table_stats = ImpalaColumn.convert_table_stats(raw_table_stats)
+        for match_num, match in enumerate(matches):
+            column_name, column_type, nullable = match.groups()
+            column = ImpalaColumn(
+                table_database=None,
+                table_schema=relation.schema,
+                table_name=relation.table,
+                table_type=relation.type,
+                column_index=match_num,
+                table_owner=owner,
+                column=column_name,
+                dtype=column_type,
+                table_stats=table_stats
+            )
+            columns.append(column)
+
+        return columns

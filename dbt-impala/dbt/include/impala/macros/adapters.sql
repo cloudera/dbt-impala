@@ -61,7 +61,7 @@
 
 {% macro impala__drop_schema(relation) -%}
   {%- call statement('drop_schema') -%}
-    drop schema if exists {{ relation }} cascade
+    drop schema if exists {{ relation }}
   {%- endcall -%}
 {% endmacro %}
 
@@ -72,6 +72,9 @@
 {% endmacro %}
 
 {% macro impala__rename_relation(from_relation, to_relation) -%}
+  {% call statement('drop_relation') %}
+    drop {{ to_relation.type }} if exists {{ to_relation }}
+  {% endcall %}
   {% call statement('rename_relation') -%}
     {% if not from_relation.type %}
       {% do exceptions.raise_database_error("Cannot rename a relation with a blank type: " ~ from_relation.identifier) %}
@@ -83,4 +86,11 @@
       {% do exceptions.raise_database_error("Unknown type '" ~ from_relation.type ~ "' for relation: " ~ from_relation.identifier) %}
     {% endif %}
   {%- endcall %}
+{% endmacro %}
+
+{% macro impaladapter__get_columns_in_relation(relation) -%}
+  {% call statement('get_columns_in_relation', fetch_result=True) %}
+      describe extended {{ relation.include(schema=(schema is not none)) }}
+  {% endcall %}
+  {% do return(load_result('get_columns_in_relation').table) %}
 {% endmacro %}

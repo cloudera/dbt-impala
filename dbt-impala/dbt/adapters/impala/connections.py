@@ -117,8 +117,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
         abridge_sql_log: bool = False
     ) -> Tuple[Connection, Any]:
         
-        print("[add_query]", sql, bindings)
-
         connection = self.get_thread_connection()
         if auto_begin and connection.transaction_open is False:
             self.begin()
