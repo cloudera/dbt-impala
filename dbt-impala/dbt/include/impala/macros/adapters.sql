@@ -88,9 +88,15 @@
   {%- endcall %}
 {% endmacro %}
 
-{% macro impaladapter__get_columns_in_relation(relation) -%}
+{% macro impala__get_columns_in_relation(relation) -%}
   {% call statement('get_columns_in_relation', fetch_result=True) %}
       describe extended {{ relation.include(schema=(schema is not none)) }}
   {% endcall %}
   {% do return(load_result('get_columns_in_relation').table) %}
+{% endmacro %}
+
+{% macro impala__alter_column_type(relation, column_name, new_column_type) -%}
+  {% call statement('alter_column_type') %}
+    alter table {{ relation }} change {{ column_name }} {{ column_name }} {{ new_column_type }}
+  {% endcall %}
 {% endmacro %}
