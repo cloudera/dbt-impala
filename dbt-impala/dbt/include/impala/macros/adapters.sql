@@ -100,3 +100,9 @@
     alter table {{ relation }} change {{ column_name }} {{ column_name }} {{ new_column_type }}
   {% endcall %}
 {% endmacro %}
+
+{% macro impala__truncate_relation(relation) -%}
+    {% call statement('truncate_relation') -%}
+      truncate table if exists {{ relation }}
+    {%- endcall %}
+{% endmacro %}
