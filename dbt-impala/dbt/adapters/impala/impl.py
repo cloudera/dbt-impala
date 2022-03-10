@@ -59,6 +59,16 @@ class ImpalaAdapter(SQLAdapter):
     def quote(self, identifier):
         return identifier # no quote
 
+    def check_schema_exists(self, database, schema):
+        results = self.execute_macro(
+            LIST_SCHEMAS_MACRO_NAME,
+            kwargs={'database': database}
+        )
+
+        exists = True if schema in [row[0] for row in results] else False
+        
+        return exists
+
     def list_schemas(self, database: str) -> List[str]:
         results = self.execute_macro(
             LIST_SCHEMAS_MACRO_NAME,
