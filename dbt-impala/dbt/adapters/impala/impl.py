@@ -59,6 +59,11 @@ class ImpalaAdapter(SQLAdapter):
     def quote(self, identifier):
         return identifier # no quote
 
+    @classmethod
+    def convert_number_type(cls, agate_table: agate.Table, col_idx: int) -> str:
+        decimals = agate_table.aggregate(agate.MaxPrecision(col_idx))  # type: ignore[attr-defined]
+        return "real" if decimals else "integer"
+        
     def check_schema_exists(self, database, schema):
         results = self.execute_macro(
             LIST_SCHEMAS_MACRO_NAME,
