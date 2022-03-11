@@ -188,6 +188,15 @@ class ImpalaAdapter(SQLAdapter):
             dtype=column['type'],
         ) for idx, column in enumerate(rows)]
 
+    @staticmethod
+    def find_table_information_separator(rows: List[dict]) -> int:
+        pos = 0
+        for row in rows:
+            if row['name'].startswith('# Detailed Table Information'):
+                break
+            pos += 1
+        return pos
+
     def parse_columns_from_information(
             self, relation: ImpalaRelation
     ) -> List[ImpalaColumn]:
