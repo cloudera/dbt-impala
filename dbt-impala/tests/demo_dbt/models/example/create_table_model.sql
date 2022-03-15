@@ -9,14 +9,21 @@
         sort_by=['bool_val'],
         comment="the model",
         row_format='delimited',
-        is_cached=false,
-        cache_pool='mypool',
-        replication_factor=1,
         stored_as='PARQUET',
-        tbl_properties="('k1'='v1', 'k2'='v2')",
-        serde_properties="('k1'='v1', 'k2'='v2')",
-        location="/root/test",
+        tbl_properties="('dbt_test'='1')",
+        serde_properties="('quoteChar'='\'', 'escapeChar'='\\')",
     )
 }}
 
-select id, bool_val, some_date, name from {{ ref('seed_sample') }}
+with source_data as (
+     select 1 as id, true as bool_val, "Name 1" as str_val,  "Name 1" as name
+     union all 
+     select 2 as id, false as bool_val, "Name 2" as str_val, "Name 2" as name
+     union all 
+     select 3 as id, false as bool_val, "Name 3'" as str_val, "Name 3" as name
+     union all 
+     select 4 as id, false as bool_val, "Name 4\\" as str_val, "Name 4" as name
+)
+
+select * from source_data
+
