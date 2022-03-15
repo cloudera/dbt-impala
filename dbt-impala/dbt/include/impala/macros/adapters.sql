@@ -1,3 +1,99 @@
+{% macro ct_option_partition_cols(label, required=false) %}
+  {%- set cols = config.get('partition_by', validator=validation.any[list, basestring]) -%}
+  {%- if cols is not none %}
+    {%- if cols is string -%}
+      {%- set cols = [cols] -%}
+    {%- endif -%}
+    {{ label }} (
+    {%- for item in cols -%}
+      {{ item }}
+      {%- if not loop.last -%},{%- endif -%}
+    {%- endfor -%}
+    )
+  {%- endif %}
+{%- endmacro -%}
+
+{% macro ct_option_sort_cols(label, required=false) %}
+  {%- set cols = config.get('sort_by', validator=validation.any[list, basestring]) -%}
+  {%- if cols is not none %}
+    {%- if cols is string -%}
+      {%- set cols = [cols] -%}
+    {%- endif -%}
+    {{ label }} (
+    {%- for item in cols -%}
+      {{ item }}
+      {%- if not loop.last -%},{%- endif -%}
+    {%- endfor -%}
+    )
+  {%- endif %}
+{%- endmacro -%}
+
+{% macro ct_option_comment_relation(label, required=false) %}
+  {%- set comment = config.get('comment', validator=validation[basestring]) -%}
+
+  {%- if comment is not none %}
+    {{label}} '{{ comment | replace("'", "\\'") }}'
+  {%- endif %}
+{%- endmacro -%}
+
+{% macro ct_option_row_format(label, required=false) %}
+  {%- set rowFormat = config.get('row_format', validator=validation[basestring]) -%}
+
+  {%- if rowFormat is not none %}
+    {{label}} {{ rowFormat }}
+  {%- endif %}
+{%- endmacro -%}
+
+{% macro ct_option_with_serdeproperties(label, required=false) %}
+  {%- set serdeproperties = config.get('serde_properties') -%}
+
+  {%- if serdeproperties is not none %}
+    {{label}} {{serdeproperties}}
+  {%- endif %}
+{%- endmacro -%}
+
+{% macro ct_option_stored_as(label, required=false) %}
+  {%- set storedAs = config.get('stored_as', validator=validation[basestring]) -%}
+
+  {%- if storedAs is not none %}
+    {{label}} {{storedAs}}
+  {%- endif %}
+{%- endmacro -%}
+
+{% macro ct_option_location_clause(label, required=false) %}
+  {%- set location = config.get('location', validator=validation[basestring]) -%}
+
+  {%- if location is not none %}
+    {{label}} '{{ location }}'
+  {%- endif %}
+{%- endmacro -%}
+
+{% macro ct_option_cached_in(label, required=false) %}
+  {%- set isCached = config.get('is_cached', validator=validation[basestring]) -%}
+  {%- set cachePool = config.get('cache_pool', validator=validation[basestring]) -%}
+  {%- set withReplication = config.get('replication_factor', validator=validation[basestring]) -%}
+  {%- set unCached = 'uncached' -%}
+
+  {%- if isCached is not none %}
+    {% if isCached == true %}
+      {% if withReplication is not none %}
+        {{label}} '{{ cachePool }}' with replication={{ withReplication }}
+      {% else %}
+        {{label}} '{{ cachePool }}'
+      {% endif %}
+    {% else %}
+      {{unCached}}
+    {% endif %}
+  {%- endif %}
+{%- endmacro -%}
+
+{% macro ct_option_tbl_properties(label, required=false) %}
+  {%- set tblProperties = config.get('tbl_properties') -%}
+
+  {%- if tblProperties is not none %}
+    {{label}} {{tblProperties}}
+  {%- endif %}
+{%- endmacro -%}
 
 {% macro impala__current_timestamp() -%}
   current_timestamp()
@@ -34,6 +130,15 @@
   create {% if temporary -%}temporary{%- endif %} table
     {{ relation.include(schema=(not temporary)) }}
     {% if backup == false -%}backup no{%- endif %}
+    {{ ct_option_partition_cols(label="partitioned by") }}
+    {{ ct_option_sort_cols(label="sort by") }}
+    {{ ct_option_comment_relation(label="comment") }}
+    {{ ct_option_row_format(label="row format") }}
+    {{ ct_option_with_serdeproperties(label="with serdeproperties") }}
+    {{ ct_option_stored_as(label="stored as") }}
+    {{ ct_option_location_clause(label="location") }} 
+    {{ ct_option_cached_in(label="cached in") }}
+    {{ ct_option_tbl_properties(label="tblproperties") }}
   as 
     {{ sql }}
   ;
