@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
+from optparse import Option
 
 import time
 import dbt.exceptions
@@ -23,11 +24,14 @@ DEFAULT_IMPALA_PORT = 21050
 @dataclass
 class ImpalaCredentials(Credentials):
     host: str
-    port: int = DEFAULT_IMPALA_PORT
+    port: Optional[int] = DEFAULT_IMPALA_PORT
     username: Optional[str] = None
     password: Optional[str] = None
     schema: str
     database: str
+    auth_type: Optional[str] = None
+    use_http_transport: Optional[bool] = True
+    use_ssl: Optional[bool] = True
 
     _ALIASES = {
         'dbname':'database',
@@ -73,10 +77,22 @@ class ImpalaConnectionManager(SQLConnectionManager):
         credentials = connection.credentials
 
         try:
-            handle = impala.dbapi.connect(
-                host=credentials.host,
-                port=credentials.port,
-            )
+            if (credentials.auth_type == "LDAP" or credentials.auth_type == "ldap"): # ldap connection
+                handle = impala.dbapi.connect(
+                    host=credentials.host,
+                    port=credentials.port,
+                    auth_mechanism='LDAP',
+                    use_http_transport=credentials.use_http_transport,
+                    user=credentials.username,
+                    password=credentials.password,
+                    use_ssl=credentials.use_ssl
+                )
+            else: # default, insecure connection
+                handle = impala.dbapi.connect(
+                    host=credentials.host,
+                    port=credentials.port,
+                )
+
             connection.state = 'open'
             connection.handle = handle
         except:
