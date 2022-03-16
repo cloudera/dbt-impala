@@ -32,6 +32,7 @@ class ImpalaCredentials(Credentials):
     auth_type: Optional[str] = None
     use_http_transport: Optional[bool] = True
     use_ssl: Optional[bool] = True
+    http_path: Optional[str] = ''  # for supporing a knox proxy in ldap env
 
     _ALIASES = {
         'dbname':'database',
@@ -85,7 +86,8 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     use_http_transport=credentials.use_http_transport,
                     user=credentials.username,
                     password=credentials.password,
-                    use_ssl=credentials.use_ssl
+                    use_ssl=credentials.use_ssl,
+                    http_path=credentials.http_path
                 )
             else: # default, insecure connection
                 handle = impala.dbapi.connect(
