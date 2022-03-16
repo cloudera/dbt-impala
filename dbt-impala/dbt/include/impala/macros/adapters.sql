@@ -153,6 +153,7 @@
 
   create view
     {{ relation.include(schema=True) }}
+    {{ ct_option_comment_relation(label="comment") }}
   as
     {{ sql }}
   ;
