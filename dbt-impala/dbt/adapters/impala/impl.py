@@ -122,6 +122,7 @@ class ImpalaAdapter(SQLAdapter):
                 if 'view' in _identifier else RelationType.Table
 
             relation = self.Relation.create(
+                database=schema_relation.database,
                 schema=schema_relation.schema,
                 identifier=_identifier,
                 type=rel_type,

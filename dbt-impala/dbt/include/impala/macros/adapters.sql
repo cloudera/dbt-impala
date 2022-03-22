@@ -99,8 +99,9 @@
   current_timestamp()
 {%- endmacro %}
 
+/* to_timestamp function in impala takes 2 arguements, second being format and mandatory */
 {% macro impala__snapshot_string_as_time(timestamp) -%}
-    {%- set result = "to_timestamp('" ~ timestamp ~ "')" -%}
+    {%- set result = "to_timestamp('" ~ timestamp ~ "', 'yyyy-MM-dd HH:mm:ss.SSSSSS')" -%}
     {{ return(result) }}
 {%- endmacro %}
 
@@ -127,8 +128,8 @@
 
   {{ sql_header if sql_header is not none }}
 
-  create {% if temporary -%}temporary{%- endif %} table
-    {{ relation.include(schema=(not temporary)) }}
+  create table
+    {{ relation.include(schema=true) }}
     {% if backup == false -%}backup no{%- endif %}
     {{ ct_option_partition_cols(label="partitioned by") }}
     {{ ct_option_sort_cols(label="sort by") }}
@@ -212,3 +213,152 @@
       truncate table if exists {{ relation }}
     {%- endcall %}
 {% endmacro %}
+
+/* impala has two hash functions, both are not perfect hash function: fnv_hash and murmur_hash, 
+   the earlier one seems be available from older version and hence is being used here */
+{% macro impala__snapshot_hash_arguments(args) -%}
+    hex(fnv_hash(concat({%- for arg in args -%}
+        coalesce(cast({{ arg }} as varchar ), '')
+        {% if not loop.last %} , '|',  {% endif %}
+    {%- endfor -%})))
+{%- endmacro %}
+
+{% macro impala__build_snapshot_table(strategy, sql) %}
+    select *,
+        {{ strategy.scd_id }} as dbt_scd_id,
+        {{ strategy.updated_at }} as dbt_updated_at,
+        {{ strategy.updated_at }} as dbt_valid_from,
+        cast(nullif({{ strategy.updated_at }}, {{ strategy.updated_at }}) as timestamp) as dbt_valid_to
+    from (
+        {{ sql }}
+    ) sbq
+{% endmacro %}
+
+{% macro get_row_count(relation_name) %}
+    {% call statement('row_count', fetch_result=True) %}
+        select count(*) as count from {{relation_name}}
+    {% endcall %}
+    {%- set row_count = load_result('row_count') -%}
+
+    {% do return(row_count['data'][0][0]) %}    
+{% endmacro %}
+
+{% macro get_new_inserts_count(relation_name) %}
+    {% call statement('inserts_count', fetch_result=True) %}
+        select count(*) as count from {{relation_name}} where {{relation_name}}.dbt_change_type='insert'
+    {% endcall %}
+    {%- set inserts_count = load_result('inserts_count') -%}
+
+    {% do return(inserts_count['data'][0][0]) %}    
+{% endmacro %}
+
+{% macro fetch_rows_to_insert(target_relation, staging_table, insert_cols) %}
+    {%- set insert_cols_csv = insert_cols | join(', ') -%}
+
+    insert into {{target_relation}} ({{insert_cols_csv}}) select {{insert_cols_csv}} from {{staging_table}}
+{% endmacro %}
+
+/* snapshots flow for impala */
+{% materialization snapshot, adapter='impala' %}
+  {%- set config = model['config'] -%}
+
+  {%- set target_table = model.get('alias', model.get('name')) -%}
+
+  {%- set strategy_name = config.get('strategy') -%}
+  {%- set unique_key = config.get('unique_key') %}
+
+  {% if not adapter.check_schema_exists(model.database, model.schema) %}
+    {% do create_schema(model.database, model.schema) %}
+  {% endif %}
+
+  {% set target_relation_exists, target_relation = get_or_create_relation(
+          database=model.database,
+          schema=model.schema,
+          identifier=target_table,
+          type='table') -%}
+
+  {%- if not target_relation.is_table -%}
+    {% do exceptions.relation_wrong_type(target_relation, 'table') %}
+  {%- endif -%}
+
+  {{ run_hooks(pre_hooks, inside_transaction=False) }}
+
+  {{ run_hooks(pre_hooks, inside_transaction=True) }}
+
+  {% set strategy_macro = strategy_dispatch(strategy_name) %}
+  {% set strategy = strategy_macro(model, "snapshotted_data", "source_data", config, target_relation_exists) %}
+
+  {% if not target_relation_exists %}
+
+      {% set build_sql = build_snapshot_table(strategy, model['compiled_sql']) %}
+      {% set final_sql = create_table_as(False, target_relation, build_sql) %}
+
+  {% else %}
+
+      {{ adapter.valid_snapshot_target(target_relation) }}
+
+      {% set staging_table = build_snapshot_staging_table(strategy, sql, target_relation) %}
+
+      /*
+      1. if the staging table has no entries, then simply do nothing
+      2. if the staging table has entries, drop the existing snapshot table, build a new one 
+       */
+
+      {% set row_count = get_row_count(staging_table) %}
+      {% set insert_count = get_new_inserts_count(staging_table) %}
+
+      /* if the change includes anything apart from insert, rebuild the snapshot */
+      {% if row_count > 0 and row_count != insert_count %}
+        {% call statement('drop_snapshot') %}
+            drop table {{target_relation}}
+        {% endcall %}
+
+        {% set build_sql = build_snapshot_table(strategy, model['compiled_sql']) %}
+        {% set final_sql = create_table_as(False, target_relation, build_sql) %}
+      {% elif row_count > 0 and row_count == insert_count %} /* insert, if all changes are of that type */
+        
+        {% set source_columns = adapter.get_columns_in_relation(staging_table)
+                                   | rejectattr('name', 'equalto', 'dbt_change_type')
+                                   | rejectattr('name', 'equalto', 'DBT_CHANGE_TYPE')
+                                   | rejectattr('name', 'equalto', 'dbt_unique_key')
+                                   | rejectattr('name', 'equalto', 'DBT_UNIQUE_KEY')
+                                   | list %}
+
+        {% set quoted_source_columns = [] %}
+        {% for column in source_columns %}
+          {% do quoted_source_columns.append(adapter.quote(column.name)) %}
+        {% endfor %}
+        
+        {% set final_sql = fetch_rows_to_insert(target_relation, staging_table, quoted_source_columns) %}
+      {% else %}
+        {% set final_sql = 'select 1' %} /* dummy sql */
+      {% endif %}
+
+  {% endif %}
+
+  {% call statement('main') %}
+      {{ final_sql }}
+  {% endcall %}
+
+  {% do persist_docs(target_relation, model) %}
+
+  {% if not target_relation_exists %}
+    {% do create_indexes(target_relation) %}
+  {% endif %}
+
+  {% if staging_table is defined %}
+    {% call statement('purge_staging') %}
+      drop table {{staging_table}}
+    {% endcall %}
+  {% endif %}
+
+  {{ run_hooks(post_hooks, inside_transaction=True) }}
+
+  {{ adapter.commit() }}
+
+  {{ run_hooks(post_hooks, inside_transaction=False) }}
+
+  {{ return({'relations': [target_relation]}) }}
+
+{% endmaterialization %}
+
