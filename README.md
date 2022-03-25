@@ -44,8 +44,8 @@ demo_project:
 |Materialization: Incremental|No|
 |Materialization: Ephemeral|No|
 |Seeds|Yes|
-|Tests|No|
-|Snapshots|No|
+|Tests|Yes|
+|Snapshots|Yes|
 |Documentation|No|
 |Authentication: LDAP|Yes|
 |Authentication: Kerberos|No|
