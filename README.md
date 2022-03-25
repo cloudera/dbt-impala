@@ -15,8 +15,7 @@ dbt-core >= 1.0.1
 
 ### Installing dbt-impala
 
-- Clone this repository
-- `python setup.py install`
+`pip install dbt-impala`
 
 ### Profile Setup
 

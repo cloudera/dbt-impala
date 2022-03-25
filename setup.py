@@ -15,16 +15,21 @@
 
 from setuptools import find_namespace_packages, setup
 
-package_name = "dbt_impala"
+
+with open('README.md') as f:
+    long_description = f.read()
+
+package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
 package_version = "1.0.1"
-description = """The dbt_impala adapter plugin for dbt"""
+description = """The Impala adapter plugin for dbt"""
 
 setup(
     name=package_name,
     version=package_version,
     description="Impala adapter for DBT",
-    long_description="Impala adapter for DBT",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     author="Cloudera",
     author_email="innovation-feedback@cloudera.com",
     url="https://github.com/cloudera/dbt-impala",
@@ -33,5 +38,16 @@ setup(
     install_requires=[
         "dbt-core==1.0.1",
         "impyla"
-    ]
+    ],
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "License :: OSI Approved :: Apache Software License"
+    ],
+    zip_safe=False
 )
