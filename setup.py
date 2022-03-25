@@ -18,7 +18,7 @@ from setuptools import find_namespace_packages, setup
 package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
 package_version = "1.0.1"
-description = """The dbt_impala adapter plugin for dbt"""
+description = """The Impala adapter plugin for dbt"""
 
 setup(
     name=package_name,
@@ -42,5 +42,6 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10"
-    ]
+    ],
+    zip_safe=False,
 )
