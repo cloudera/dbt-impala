@@ -41,7 +41,8 @@ setup(
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10"
+        "Programming Language :: Python :: 3.10",
+        "License :: OSI Approved :: Apache Software License"
     ],
     zip_safe=False
 )
