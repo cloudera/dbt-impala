@@ -1,6 +1,6 @@
 # dbt-impala
 
-The `dbt-impala` adapter allows you to use dbt along with [Apache Impala](https://impala.apache.org/) and [Cloudera Data Platform](https://cloudera.com)
+The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along with [Apache Impala](https://impala.apache.org/) and [Cloudera Data Platform](https://cloudera.com)
 
 
 ## Getting started
@@ -8,6 +8,10 @@ The `dbt-impala` adapter allows you to use dbt along with [Apache Impala](https:
 - [Install dbt](https://docs.getdbt.com/docs/installation)
 - Read the [introduction](https://docs.getdbt.com/docs/introduction/) and [viewpoint](https://docs.getdbt.com/docs/about/viewpoint/)
 
+### Requirements
+
+Python >= 3.8
+dbt-core >= 1.0.1
 
 ### Installing dbt-impala
 
