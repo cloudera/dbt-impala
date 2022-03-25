@@ -1,6 +1,6 @@
 # dbt-impala
 
-The `dbt-impala` adapter allows you to use dbt along with [Apache Impala](https://impala.apache.org/) and [Cloudera Data Platform](https://cloudera.com)
+The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along with [Apache Impala](https://impala.apache.org/) and [Cloudera Data Platform](https://cloudera.com)
 
 
 ## Getting started
