@@ -15,7 +15,7 @@
 
 from setuptools import find_namespace_packages, setup
 
-package_name = "dbt_impala"
+package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
 package_version = "1.0.1"
 description = """The dbt_impala adapter plugin for dbt"""
