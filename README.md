@@ -11,6 +11,7 @@ The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along 
 ### Requirements
 
 Python >= 3.8
+
 dbt-core >= 1.0.1
 
 ### Installing dbt-impala
