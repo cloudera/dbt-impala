@@ -15,6 +15,10 @@
 
 from setuptools import find_namespace_packages, setup
 
+
+with open('README.md') as f:
+    long_description = f.read()
+
 package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
 package_version = "1.0.1"
@@ -24,7 +28,8 @@ setup(
     name=package_name,
     version=package_version,
     description="Impala adapter for DBT",
-    long_description="Impala adapter for DBT",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     author="Cloudera",
     author_email="innovation-feedback@cloudera.com",
     url="https://github.com/cloudera/dbt-impala",
