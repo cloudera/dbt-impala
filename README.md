@@ -11,8 +11,7 @@ The `dbt-impala` adapter allows you to use dbt along with [Apache Impala](https:
 
 ### Installing dbt-impala
 
-- Clone this repository
-- `python setup.py install`
+`pip install dbt-impala`
 
 ### Profile Setup
 
