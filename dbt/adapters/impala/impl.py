@@ -17,17 +17,22 @@ from dbt.adapters.impala import ImpalaConnectionManager
 
 import re
 
-from typing import List
+from typing import List, Tuple, Dict, Iterable, Any
 
 import agate
 
 import dbt.exceptions
+from dbt.exceptions import warn_or_error
 from dbt.contracts.relation import RelationType
 
 from dbt.adapters.impala.column import ImpalaColumn
 from dbt.adapters.impala.relation import ImpalaRelation
 
 from dbt.events import AdapterLogger
+
+from dbt.clients.agate_helper import DEFAULT_TYPE_TESTER, ColumnTypeBuilder, NullableAgateType
+from dbt.utils import executor
+from concurrent.futures import as_completed, Future
 
 logger = AdapterLogger("Impala")
 
@@ -245,3 +250,143 @@ class ImpalaAdapter(SQLAdapter):
             columns.append(column)
 
         return columns
+
+    def _merged_column_types(
+        tables: List[agate.Table]
+    ) -> Dict[str, agate.data_types.DataType]:
+        # this is a lot like agate.Table.merge, but with handling for all-null
+        # rows being "any type".
+        new_columns: ColumnTypeBuilder = ColumnTypeBuilder()
+        for table in tables:
+            for i in range(len(table.columns)):
+                column_name: str = table.column_names[i]
+                column_type: NullableAgateType = table.column_types[i]
+                # avoid over-sensitive type inference
+                
+                new_columns[column_name] = column_type
+
+        return new_columns.finalize()
+
+    def _merge_tables(tables: List[agate.Table]) -> agate.Table:
+        new_columns = ImpalaAdapter._merged_column_types(tables)
+        column_names = tuple(new_columns.keys())
+        column_types = tuple(new_columns.values())
+
+        rows: List[agate.Row] = []
+        for table in tables:
+            if (
+                table.column_names == column_names and
+                table.column_types == column_types
+            ):
+                rows.extend(table.rows)
+            else:
+                for row in table.rows:
+                    data = [row.get(name, None) for name in column_names]
+                    rows.append(agate.Row(data, column_names))
+        # _is_fork to tell agate that we already made things into `Row`s.
+        return agate.Table(rows, column_names, column_types, _is_fork=True)
+
+    def _catch_as_completed(
+        futures  # typing: List[Future[agate.Table]]
+    ) -> Tuple[agate.Table, List[Exception]]:
+
+        # catalogs: agate.Table = agate.Table(rows=[])
+        tables: List[agate.Table] = []
+        exceptions: List[Exception] = []
+
+        for future in as_completed(futures):
+            exc = future.exception()
+            # we want to re-raise on ctrl+c and BaseException
+            if exc is None:
+                catalog = future.result()
+                tables.append(catalog)
+            elif (
+                isinstance(exc, KeyboardInterrupt) or
+                not isinstance(exc, Exception)
+            ):
+                raise exc
+            else:
+                warn_or_error(
+                    f'Encountered an error while generating catalog: {str(exc)}'
+                )
+                # exc is not None, derives from Exception, and isn't ctrl+c
+                exceptions.append(exc)
+
+        return ImpalaAdapter._merge_tables(tables), exceptions
+
+    def get_catalog(self, manifest):
+        schema_map = self._get_catalog_schemas(manifest)
+
+        with executor(self.config) as tpe:
+            futures: List[Future[agate.Table]] = []
+            for info, schemas in schema_map.items():
+                for schema in schemas:
+                    for relation in self.list_relations(info.database, schema):
+                        name = '.'.join([str(relation.database), str(relation.schema), str(relation.name)])
+
+                        futures.append(tpe.submit_connected(
+                            self, name,
+                            self._get_one_catalog, relation, '.'.join([str(relation.database), str(relation.schema)])
+                        ))
+            catalogs, exceptions = ImpalaAdapter._catch_as_completed(futures)
+
+        return catalogs, exceptions
+
+    def _get_datatype(self, col_type):
+        defaultType = agate.data_types.Text(null_values=('null', ''))
+
+        datatypeMap = {
+            'int': agate.data_types.Number(null_values=('null', '')),
+            'double': agate.data_types.Number(null_values=('null', '')),
+            'timestamp': agate.data_types.DateTime(null_values=('null', ''), datetime_format='%Y-%m-%d %H:%M:%S'),
+            'date': agate.data_types.Date(null_values=('null', ''), date_format='%Y-%m-%d'),
+            'boolean': agate.data_types.Boolean(true_values=('true',), false_values=('false',), null_values=('null', '')),
+            'text': defaultType,
+            'string': defaultType
+        }
+
+        try:
+            dt = datatypeMap[col_type]
+
+            if (dt == None): 
+                return defaultType
+            else:
+                return dt
+        except:
+            return defaultType
+
+    def _get_one_catalog(
+        self, relation, unique_id
+    ) -> agate.Table:
+        
+        columns: List[Dict[str, Any]] = []
+
+        columns.extend(self._get_columns_for_catalog(relation, unique_id))
+
+        tableFromCols = agate.Table.from_object(
+            columns, column_types=DEFAULT_TYPE_TESTER
+        )
+
+        colNames = list(map(lambda x: x['column_name'], columns))
+        colTypes = list(map(lambda x: self._get_datatype(x['column_type']), columns))
+
+        tableFromCols = agate.Table([], column_names=colNames, column_types=colTypes)
+
+        return tableFromCols 
+
+    def _get_columns_for_catalog(
+        self, relation: ImpalaRelation, unique_id
+    ) -> Iterable[Dict[str, Any]]:
+        columns = self.get_columns_in_relation(relation)
+
+        for column in columns:
+            # convert ImpalaColumns into catalog dicts
+            as_dict = column.to_column_dict()
+            if (unique_id):
+                as_dict['column_name'] = unique_id + '.' +  relation.table + '.' + as_dict.pop('column', None)
+            else:
+                as_dict['column_name'] = relation.database + '.' + relation.schema + '.' + relation.table + '.' + as_dict.pop('column', None)
+            as_dict['column_type'] = as_dict.pop('dtype')
+            as_dict['table_database'] = None
+            yield as_dict
+ 
