@@ -13,12 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #}
- 
+
 {% macro impala__get_catalog(information_schema, schemas) -%}
 
-  {% set msg -%}
-    get_catalog not implemented for impala
-  {%- endset %}
-
-  {{ exceptions.raise_compiler_error(msg) }}
+  {# no-op #}
 {% endmacro %}
+ 
