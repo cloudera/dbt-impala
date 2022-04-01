@@ -1,0 +1,10 @@
+build/
+dbt_impala.egg-info/
+dist/
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+.vscode
+*.log
+logs/
