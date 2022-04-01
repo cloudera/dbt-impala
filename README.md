@@ -41,11 +41,13 @@ demo_project:
 |------|-----------|
 |Materialization: Table|Yes|
 |Materialization: View|Yes|
-|Materialization: Incremental|No|
+|Materialization: Incremental - Append|Yes|
+|Materialization: Incremental - Insert+Overwrite|Yes|
+|Materialization: Incremental - Merge|No|
 |Materialization: Ephemeral|No|
 |Seeds|Yes|
 |Tests|Yes|
 |Snapshots|Yes|
-|Documentation|No|
+|Documentation|Yes|
 |Authentication: LDAP|Yes|
-|Authentication: Kerberos|No|
+|Authentication: Kerberos|Yes|
