@@ -44,6 +44,7 @@ class ImpalaCredentials(Credentials):
     schema: str
     database: str
     auth_type: Optional[str] = None
+    kerberos_service_name: Optional[str] = None
     use_http_transport: Optional[bool] = True
     use_ssl: Optional[bool] = True
     http_path: Optional[str] = ''  # for supporing a knox proxy in ldap env
@@ -102,6 +103,15 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     password=credentials.password,
                     use_ssl=credentials.use_ssl,
                     http_path=credentials.http_path
+                )
+            elif (credentials.auth_type == "GSSAPI" or credentials.auth_type == "gssapi" or credentials.auth_type == "kerberos"): # kerberos based connection
+                handle = impala.dbapi.connect(
+                    host=credentials.host,
+                    port=credentials.port,
+                    auth_mechanism='GSSAPI',
+                    kerberos_service_name=credentials.kerberos_service_name,
+                    use_http_transport=credentials.use_http_transport,
+                    use_ssl=credentials.use_ssl
                 )
             else: # default, insecure connection
                 handle = impala.dbapi.connect(
