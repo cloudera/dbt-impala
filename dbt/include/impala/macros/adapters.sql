@@ -141,10 +141,11 @@
 
   {%- set sql_header = config.get('sql_header', none) -%}
   {%- set backup = config.get('backup') -%}
+  {%- set is_external = config.get('external') -%}
 
   {{ sql_header if sql_header is not none }}
 
-  create table
+  create {% if is_external == true -%}external{%- endif %} table
     {{ relation.include(schema=true) }}
     {% if backup == false -%}backup no{%- endif %}
     {{ ct_option_partition_cols(label="partitioned by") }}
