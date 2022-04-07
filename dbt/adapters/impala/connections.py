@@ -33,6 +33,10 @@ from dbt.logger import GLOBAL_LOGGER as logger
 
 import impala.dbapi
 
+import json
+import hashlib
+import threading
+
 DEFAULT_IMPALA_PORT = 21050
 
 @dataclass
@@ -48,6 +52,7 @@ class ImpalaCredentials(Credentials):
     use_http_transport: Optional[bool] = True
     use_ssl: Optional[bool] = True
     http_path: Optional[str] = ''  # for supporing a knox proxy in ldap env
+    usage_tracking: Optional[bool] = True # usage tracking is enabled by default
 
     _ALIASES = {
         'dbname':'database',
@@ -92,6 +97,8 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
         credentials = connection.credentials
 
+        auth_type = "insecure"
+
         try:
             if (credentials.auth_type == "LDAP" or credentials.auth_type == "ldap"): # ldap connection
                 handle = impala.dbapi.connect(
@@ -104,6 +111,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     use_ssl=credentials.use_ssl,
                     http_path=credentials.http_path
                 )
+                auth_type = "ldap"
             elif (credentials.auth_type == "GSSAPI" or credentials.auth_type == "gssapi" or credentials.auth_type == "kerberos"): # kerberos based connection
                 handle = impala.dbapi.connect(
                     host=credentials.host,
@@ -113,6 +121,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     use_http_transport=credentials.use_http_transport,
                     use_ssl=credentials.use_ssl
                 )
+                auth_type = "kerberos"
             else: # default, insecure connection
                 handle = impala.dbapi.connect(
                     host=credentials.host,
@@ -126,6 +135,22 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection.state = 'fail'
             connection.handle = None
             pass
+
+        try:
+            if (credentials.usage_tracking): 
+               tracking_data = {}
+               payload = {}
+               payload["id"] = "dbt_impala_open"
+               payload["unique_hash"] = hashlib.md5(credentials.host.encode()).hexdigest()
+               payload["auth"] = auth_type
+               payload["connection_state"] = connection.state
+
+               tracking_data["data"] = payload
+
+               the_track_thread = threading.Thread(target=track_usage, kwargs={"data": tracking_data})
+               the_track_thread.start()
+        except:
+            logger.debug("Usage tracking error")
 
         return connection
 
@@ -190,3 +215,19 @@ class ImpalaConnectionManager(SQLConnectionManager):
             )
 
             return connection, cursor
+
+# usage tracking code - Cloudera specific 
+def track_usage(data):
+   import requests 
+
+   SNOWPLOW_ENDPOINT = "https://dcevents.cldrteam.datacoral.io/cldrteam/apievents"
+
+   # prod creds
+   headers = {'x-api-key': 'P8TkX3zUwtOIxJkoKngn3Rf9j3jyro6Bfnd50AEV', 'x-datacoral-environment': 'prod', 'x-datacoral-passthrough': 'true'}
+
+   data = json.dumps([data])
+
+   res = requests.post(SNOWPLOW_ENDPOINT, data = data, headers = headers)
+
+   return res
+
