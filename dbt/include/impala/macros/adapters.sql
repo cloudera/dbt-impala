@@ -140,14 +140,12 @@
 {% macro impala__create_table_as(temporary, relation, sql) -%}
 
   {%- set sql_header = config.get('sql_header', none) -%}
-  {%- set backup = config.get('backup') -%}
   {%- set is_external = config.get('external') -%}
 
   {{ sql_header if sql_header is not none }}
 
   create {% if is_external == true -%}external{%- endif %} table
     {{ relation.include(schema=true) }}
-    {% if backup == false -%}backup no{%- endif %}
     {{ ct_option_partition_cols(label="partitioned by") }}
     {{ ct_option_sort_cols(label="sort by") }}
     {{ ct_option_comment_relation(label="comment") }}
