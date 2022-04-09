@@ -21,7 +21,7 @@ with open('README.md') as f:
 
 package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
-package_version = "1.0.4"
+package_version = "1.0.4-1"
 description = """The Impala adapter plugin for dbt"""
 
 setup(
