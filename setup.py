@@ -21,7 +21,7 @@ with open('README.md') as f:
 
 package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
-package_version = "1.0.4"
+package_version = "1.0.4-1"
 description = """The Impala adapter plugin for dbt"""
 
 setup(
@@ -40,13 +40,12 @@ setup(
         "impyla"
     ],
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
         "License :: OSI Approved :: Apache Software License"
     ],
     zip_safe=False
