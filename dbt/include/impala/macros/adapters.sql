@@ -188,24 +188,66 @@
 {% endmacro %}
 
 {% macro impala__drop_relation(relation) -%}
+  {% set rel_type = get_relation_type(relation) %}
   {% call statement('drop_relation', auto_begin=False) -%}
-    drop {{ relation.type }} if exists {{ relation }}
+    drop {{ rel_type }} if exists {{ relation }}
   {%- endcall %}
 {% endmacro %}
 
+{% macro is_relation_present(relation) -%}
+  {% set result_set = run_query('show tables in ' ~ relation.schema ~ ' like "' ~ relation.identifier ~ '"') %}
+  {%- if result_set.rows -%}
+    {% do return(true) %}
+  {% else %}
+    {% do return(false) %}
+  {% endif %}
+{% endmacro %}
+
+{% macro get_relation_type(relation) -%}
+  {% set rel_type = 'table' %}
+  {% set relation_exists = is_relation_present(relation) %}
+
+  {%- if not relation_exists -%}
+    {% do return(rel_type) %}
+  {%- endif -%}
+
+  {% set result_set = run_query('describe extended ' ~ relation) %}
+  
+  {% if execute %}
+    {%- for rs in result_set -%}
+      {%- if rs[0].startswith('Table Type') -%}
+        {%- if rs[1].startswith('VIRTUAL_VIEW') -%}
+          {% set rel_type = 'view' %}
+          {% do return(rel_type) %}
+        {%- elif rs[1].startswith('MANAGED_TABLE') -%}
+          {% set rel_type = 'table' %}
+          {% do return(rel_type) %}
+        {%- elif rs[1].startswith('EXTERNAL_TABLE') -%}
+          {% set rel_type = 'table' %}
+          {% do return(rel_type) %}
+        {%- endif -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {% endif %}
+
+  {% do return(rel_type) %}
+{% endmacro %}
+
 {% macro impala__rename_relation(from_relation, to_relation) -%}
+  {% set from_rel_type = get_relation_type(from_relation) %}
+
   {% call statement('drop_relation') %}
     drop {{ to_relation.type }} if exists {{ to_relation }}
   {% endcall %}
   {% call statement('rename_relation') -%}
-    {% if not from_relation.type %}
+    {% if not from_rel_type %}
       {% do exceptions.raise_database_error("Cannot rename a relation with a blank type: " ~ from_relation.identifier) %}
-    {% elif from_relation.type in ('table') %}
+    {% elif from_rel_type == 'table' %}
         alter table {{ from_relation }} rename to {{ to_relation }}
-    {% elif from_relation.type == 'view' %}
+    {% elif from_rel_type == 'view' %}
         alter view {{ from_relation }} rename to {{ to_relation }}
     {% else %}
-      {% do exceptions.raise_database_error("Unknown type '" ~ from_relation.type ~ "' for relation: " ~ from_relation.identifier) %}
+      {% do exceptions.raise_database_error("Unknown type '" ~ from_rel_type ~ "' for relation: " ~ from_relation.identifier) %}
     {% endif %}
   {%- endcall %}
 {% endmacro %}
