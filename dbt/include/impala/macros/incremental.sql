@@ -114,8 +114,10 @@
       {% set dest_columns = adapter.get_columns_in_relation(existing_relation) %}
     {% endif %}
 
-    {#-- since unique key is not supported, the follow macro (default impl), will only return insert stm, and hence is directly used here --#}
-    {% set build_sql = get_delete_insert_merge_sql(target_relation, tmp_relation, unique_key, dest_columns) %}
+    {#-- since unique key is not supported, the following macro (default impl), will only return insert stm, and hence is directly used here --#}
+    {#-- set build_sql = get_delete_insert_merge_sql(target_relation, tmp_relation, unique_key, dest_columns) --#}
+
+    {% set build_sql = get_insert_overwrite_sql(target_relation, tmp_relation, dest_columns) %}
   
   {% endif %}
 
