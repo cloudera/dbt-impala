@@ -207,6 +207,11 @@
 {% endmacro %}
 
 {% macro get_relation_type(relation) -%}
+  {#-- ensure that the metastore is updated before querying object type --#}
+  invalidate metastore {{ relation }}
+
+  -- {{ log("invalidate metastore " ~ relation) }}
+
   {% set rel_type = 'table' %}
   {% set relation_exists = is_relation_present(relation) %}
 
