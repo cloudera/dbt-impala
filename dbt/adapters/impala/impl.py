@@ -30,7 +30,7 @@ from dbt.adapters.impala.relation import ImpalaRelation
 
 from dbt.events import AdapterLogger
 
-from dbt.clients.agate_helper import DEFAULT_TYPE_TESTER, ColumnTypeBuilder, NullableAgateType
+from dbt.clients.agate_helper import DEFAULT_TYPE_TESTER, ColumnTypeBuilder, NullableAgateType, _NullMarker
 from dbt.utils import executor
 from concurrent.futures import as_completed, Future
 
@@ -262,6 +262,8 @@ class ImpalaAdapter(SQLAdapter):
                 column_name: str = table.column_names[i]
                 column_type: NullableAgateType = table.column_types[i]
                 # avoid over-sensitive type inference
+                if all(x is None for x in table.columns[column_name]):
+                    column_type = _NullMarker()
                 
                 new_columns[column_name] = column_type
 
@@ -382,11 +384,10 @@ class ImpalaAdapter(SQLAdapter):
         for column in columns:
             # convert ImpalaColumns into catalog dicts
             as_dict = column.to_column_dict()
-            if (unique_id):
-                as_dict['column_name'] = unique_id + '.' +  relation.table + '.' + as_dict.pop('column', None)
-            else:
-                as_dict['column_name'] = relation.database + '.' + relation.schema + '.' + relation.table + '.' + as_dict.pop('column', None)
+            
+            as_dict['column_name'] = relation.table + '.' + as_dict.pop('column', None)
             as_dict['column_type'] = as_dict.pop('dtype')
-            as_dict['table_database'] = None
+            as_dict['table_database'] = relation.database
+
             yield as_dict
  
