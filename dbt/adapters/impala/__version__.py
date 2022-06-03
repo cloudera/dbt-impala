@@ -12,4 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+<<<<<<< dbt_core_1_1
 version="1.0.7"
+=======
+version="1.0.6"
+>>>>>>> master
