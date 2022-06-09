@@ -195,7 +195,7 @@
 {% endmacro %}
 
 {% macro is_relation_present(relation) -%}
-  {% set result_set = run_query('show tables in ' ~ relation.schema ~ ' like "' ~ relation.identifier ~ '"') %}
+  {% set result_set = run_query('show tables in ' ~ relation.schema ~ ' like "' ~ relation.identifier.lower() ~ '"') %}
 
   {% if execute %}
     {%- for rs in result_set -%}
