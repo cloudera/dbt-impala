@@ -21,7 +21,11 @@ with open('README.md') as f:
 
 package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
+<<<<<<< dbt_core_1_1
+package_version = "1.0.7"
+=======
 package_version = "1.0.6"
+>>>>>>> master
 description = """The Impala adapter plugin for dbt"""
 
 setup(
@@ -36,7 +40,7 @@ setup(
     packages=find_namespace_packages(include=['dbt', 'dbt.*']),
     include_package_data=True,
     install_requires=[
-        "dbt-core~=1.0.1",
+        "dbt-core>=1.1.0",
         "impyla"
     ],
     classifiers=[
