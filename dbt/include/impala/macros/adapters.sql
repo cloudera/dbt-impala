@@ -129,12 +129,24 @@
     {{ return(load_result('list_schemas').table) }}
 {% endmacro %}
 
+{# Note: This function currently needs to query each object to determine its type. Depending on the schema, this function could be expensive. #}
 {% macro impala__list_relations_without_caching(relation) %}
-  {% call statement('list_relations_without_caching', fetch_result=True) -%}
-    show tables in {{ relation }}
-  {% endcall %}
+  {% set result_set = run_query('show tables in ' ~ relation) %}
+  {% set objects_with_type = [] %}
 
-  {% do return(load_result('list_relations_without_caching').table) %}
+  {%- for rs in result_set -%}
+    {% set obj_type = [] %}
+
+    {% do obj_type.append(rs[0]) %}
+
+    {% set obj_rel = relation.new_copy(relation.schema, rs[0]) %}
+    {% set rel_type = get_relation_type(obj_rel) %}
+    {% do obj_type.append(rel_type) %}
+
+    {% do objects_with_type.append(obj_type) %}
+  {%- endfor -%}
+
+  {{ return(objects_with_type) }}
 {% endmacro %}
 
 {% macro impala__create_table_as(temporary, relation, sql) -%}

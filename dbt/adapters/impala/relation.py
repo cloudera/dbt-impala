@@ -40,3 +40,13 @@ class ImpalaRelation(BaseRelation):
     
     def render(self):
         return super().render()
+
+    def new_copy(self, name, identifier):
+        new_relation = ImpalaRelation.create(
+                database=name,
+                schema=name,
+                identifier=identifier,
+                information=identifier,
+            )
+
+        return new_relation
