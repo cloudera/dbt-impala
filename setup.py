@@ -37,7 +37,7 @@ setup(
     include_package_data=True,
     install_requires=[
         "dbt-core>=1.1.0",
-        "impyla"
+        "impyla>=0.18a5"
     ],
     classifiers=[
         "Development Status :: 4 - Beta",
