@@ -163,10 +163,7 @@ class ImpalaAdapter(SQLAdapter):
             columns = self.parse_columns_from_information(cached_relation)
 
         # execute the macro and parse the data
-        if not columns:
-            rows: List[agate.Row] = super().get_columns_in_relation(relation)
-            columns = self.parse_describe_extended(relation, rows)
-           
+        if not columns:       
             try:
                 rows: List[agate.Row] = super().get_columns_in_relation(relation)
                 columns = self.parse_describe_extended(relation, rows)
