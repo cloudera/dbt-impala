@@ -17,7 +17,11 @@
     {%- set partition_cols = config.get('partition_by', validator=validation.any[list]) -%}
 
     {% if partition_cols is not none %}
-        {%- set partition_col = partition_cols[0] -%}
+        {% if partition_cols is string %}
+           {%- set partition_col = partition_cols -%}
+        {% else %}
+           {%- set partition_col = partition_cols[0] -%}
+        {% endif %}
 
         {%- set dest_cols_csv = get_quoted_csv_exclude(dest_columns | map(attribute="name"), "") -%}
         {%- set dest_cols_csv_exclude = get_quoted_csv_exclude(dest_columns | map(attribute="name"), partition_col) -%}
