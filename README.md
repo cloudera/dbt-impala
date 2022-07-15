@@ -14,6 +14,8 @@ Python >= 3.8
 
 dbt-core >= 1.1.0
 
+impyla >= 0.18a5
+
 ### Installing dbt-impala
 
 `pip install dbt-impala`
