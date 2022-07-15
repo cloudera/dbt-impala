@@ -128,23 +128,19 @@ class ImpalaAdapter(SQLAdapter):
 
         relations = []
         for row in results:
-            if len(row) != 1:
+            if len(row) != 2:
                 raise dbt.exceptions.RuntimeException(
                     f'Invalid value from "show table extended ...", '
                     f'got {len(row)} values, expected 4'
                 )
             _identifier = row[0]
-
-            # TODO: the following is taken from spark, needs to see what is there in impala
-            # TODO: this modification is not really right, need fix
-            rel_type = RelationType.View \
-                if 'view' in _identifier else RelationType.Table
+            _rel_type   = row[1]
 
             relation = self.Relation.create(
                 database=schema_relation.database,
                 schema=schema_relation.schema,
                 identifier=_identifier,
-                type=rel_type,
+                type=_rel_type,
                 information=_identifier,
             )
             relations.append(relation)
