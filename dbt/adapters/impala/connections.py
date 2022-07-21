@@ -219,12 +219,13 @@ class ImpalaConnectionManager(SQLConnectionManager):
 # usage tracking code - Cloudera specific 
 def track_usage(data):
    import requests 
+   from decouple import config
 
-   SNOWPLOW_ENDPOINT = "https://dcevents.cldrteam.datacoral.io/cldrteam/apievents"
-   SNOWPLOW_TIMEOUT  = 10 # 10 seconds
+   SNOWPLOW_ENDPOINT = config('SNOWPLOW_ENDPOINT')
+   SNOWPLOW_TIMEOUT  = int(config('SNOWPLOW_TIMEOUT')) # 10 seconds
 
    # prod creds
-   headers = {'x-api-key': 'P8TkX3zUwtOIxJkoKngn3Rf9j3jyro6Bfnd50AEV', 'x-datacoral-environment': 'prod', 'x-datacoral-passthrough': 'true'}
+   headers = {'x-api-key': config('SNOWPLOW_API_KEY'), 'x-datacoral-environment': config('SNOWPLOW_ENNV'), 'x-datacoral-passthrough': 'true'}
 
    data = json.dumps([data])
 
