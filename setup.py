@@ -34,10 +34,12 @@ setup(
     author_email="innovation-feedback@cloudera.com",
     url="https://github.com/cloudera/dbt-impala",
     packages=find_namespace_packages(include=['dbt', 'dbt.*']),
+    data_files=[('', ['dbt/adapters/impala/.env'])],
     include_package_data=True,
     install_requires=[
         "dbt-core>=1.1.0",
-        "impyla>=0.18a5"
+        "impyla>=0.18a5",
+        "python-decouple>=3.6"
     ],
     classifiers=[
         "Development Status :: 4 - Beta",
