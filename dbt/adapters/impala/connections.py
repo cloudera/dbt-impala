@@ -42,11 +42,10 @@ DEFAULT_IMPALA_PORT = 21050
 @dataclass
 class ImpalaCredentials(Credentials):
     host: str
+    database: Optional[str]
     port: Optional[int] = DEFAULT_IMPALA_PORT
     username: Optional[str] = None
     password: Optional[str] = None
-    schema: str
-    database: str
     auth_type: Optional[str] = None
     kerberos_service_name: Optional[str] = None
     use_http_transport: Optional[bool] = True
@@ -60,6 +59,27 @@ class ImpalaCredentials(Credentials):
         'user':'username'
     }
 
+    @classmethod
+    def __pre_deserialize__(cls, data):
+        data = super().__pre_deserialize__(data)
+        if 'database' not in data:
+            data['database'] = None
+        return data
+
+    def __post_init__(self):
+        # impala classifies database and schema as the same thing
+        if (
+            self.database is not None and
+            self.database != self.schema
+        ):
+            raise dbt.exceptions.RuntimeException(
+                f'    schema: {self.schema} \n'
+                f'    database: {self.database} \n'
+                f'On Impala, database must be omitted or have the same value as'
+                f' schema.'
+            )
+        self.database = self.schema
+
     @property
     def type(self):
         return 'impala'
@@ -67,7 +87,7 @@ class ImpalaCredentials(Credentials):
     def _connection_keys(self):
         # return an iterator of keys to pretty-print in 'dbt debug'.
         # Omit fields like 'password'!
-        return ('host', 'port', 'database', 'schema', 'username')
+        return ('host', 'port', 'schema', 'username')
 
     @property
     def unique_field(self) -> str:
