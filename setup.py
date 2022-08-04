@@ -13,16 +13,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import re
 from setuptools import find_namespace_packages, setup
 
-
-with open('README.md') as f:
+# pull long description from README
+this_directory = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(this_directory, 'README.md'), 'r', encoding='utf8') as f:
     long_description = f.read()
+
+# get this package's version from dbt/adapters/<name>/__version__.py
+def _get_plugin_version_dict():
+    _version_path = os.path.join(
+        this_directory, 'dbt', 'adapters', 'impala', '__version__.py'
+    )
+    _semver = r'''(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)'''
+    _pre = r'''((?P<prekind>a|b|rc)(?P<pre>\d+))?'''
+    _version_pattern = fr'''version\s*=\s*["']{_semver}{_pre}["']'''
+    with open(_version_path) as f:
+        match = re.search(_version_pattern, f.read().strip())
+        if match is None:
+            raise ValueError(f'invalid version at {_version_path}')
+        return match.groupdict()
+
+
+# require a compatible minor version (~=), prerelease if this is a prerelease
+def _get_dbt_core_version():
+    parts = _get_plugin_version_dict()
+    minor = "{major}.{minor}.0".format(**parts)
+    pre = (parts["prekind"]+"1" if parts["prekind"] else "")
+    return f"{minor}{pre}"
 
 package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
 package_version = "1.1.1"
 description = """The Impala adapter plugin for dbt"""
+
+dbt_core_version = _get_dbt_core_version()
 
 setup(
     name=package_name,
@@ -37,7 +64,7 @@ setup(
     data_files=[('', ['dbt/adapters/impala/.env'])],
     include_package_data=True,
     install_requires=[
-        "dbt-core>=1.1.0",
+        'dbt-core~={}'.format(dbt_core_version),
         "impyla>=0.18a5",
         "python-decouple>=3.6"
     ],
