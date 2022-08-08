@@ -14,7 +14,6 @@
 
 from contextlib import contextmanager
 from dataclasses import dataclass
-from optparse import Option
 
 import time
 import dbt.exceptions
@@ -38,6 +37,7 @@ import hashlib
 import threading
 
 DEFAULT_IMPALA_PORT = 21050
+DEFAULT_MAX_RETRIES = 3
 
 @dataclass
 class ImpalaCredentials(Credentials):
@@ -52,6 +52,7 @@ class ImpalaCredentials(Credentials):
     use_ssl: Optional[bool] = True
     http_path: Optional[str] = ''  # for supporing a knox proxy in ldap env
     usage_tracking: Optional[bool] = True # usage tracking is enabled by default
+    retries: Optional[int] = DEFAULT_MAX_RETRIES
 
     _ALIASES = {
         'dbname':'database',
@@ -120,6 +121,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
         auth_type = "insecure"
 
         try:
+            # the underlying dbapi supports retries, so this is directly used instead to support retries 
             if (credentials.auth_type == "LDAP" or credentials.auth_type == "ldap"): # ldap connection
                 handle = impala.dbapi.connect(
                     host=credentials.host,
@@ -129,7 +131,8 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     user=credentials.username,
                     password=credentials.password,
                     use_ssl=credentials.use_ssl,
-                    http_path=credentials.http_path
+                    http_path=credentials.http_path,
+                    retries=credentials.retries
                 )
                 auth_type = "ldap"
             elif (credentials.auth_type == "GSSAPI" or credentials.auth_type == "gssapi" or credentials.auth_type == "kerberos"): # kerberos based connection
@@ -139,13 +142,15 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     auth_mechanism='GSSAPI',
                     kerberos_service_name=credentials.kerberos_service_name,
                     use_http_transport=credentials.use_http_transport,
-                    use_ssl=credentials.use_ssl
+                    use_ssl=credentials.use_ssl,
+                    retries=credentials.retries
                 )
                 auth_type = "kerberos"
             else: # default, insecure connection
                 handle = impala.dbapi.connect(
                     host=credentials.host,
                     port=credentials.port,
+                    retries=credentials.retries
                 )
 
             connection.state = 'open'
