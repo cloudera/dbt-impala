@@ -137,7 +137,7 @@ class ImpalaAdapter(SQLAdapter):
             _rel_type   = row[1]
 
             relation = self.Relation.create(
-                database=schema_relation.database,
+                database=None, 
                 schema=schema_relation.schema,
                 identifier=_identifier,
                 type=_rel_type,
@@ -391,7 +391,7 @@ class ImpalaAdapter(SQLAdapter):
             
             as_dict['column_name'] = relation.table + '.' + as_dict.pop('column', None)
             as_dict['column_type'] = as_dict.pop('dtype')
-            as_dict['table_database'] = relation.database
+            as_dict['table_database'] = None
 
             yield as_dict
  
