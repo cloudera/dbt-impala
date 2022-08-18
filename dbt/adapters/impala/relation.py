@@ -43,7 +43,7 @@ class ImpalaRelation(BaseRelation):
 
     def new_copy(self, name, identifier):
         new_relation = ImpalaRelation.create(
-                database=name,
+                database=None, # since include policy of database is False, this should be None
                 schema=name,
                 identifier=identifier,
                 information=identifier,
