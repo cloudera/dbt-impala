@@ -186,15 +186,17 @@ class ImpalaAdapter(SQLAdapter):
         dict_rows = [dict(zip(row._keys, row._values)) for row in raw_rows]
         # Find the separator between the rows and the metadata provided
         # by the DESCRIBE EXTENDED {{relation}} statement
-        pos = self.find_table_information_separator(dict_rows)
+        pos = ImpalaAdapter.find_table_information_separator(dict_rows)  # ensure that the class method is called
 
         # Remove rows that start with a hash, they are comments
         rows = [
             row for row in raw_rows[0:pos]
             if not row['name'].startswith('#') and not row['name'] == ''
         ]
+        # trim the fields so that these are clean key,value pairs and metadata.get() correctly returns the values
         metadata = {
-            col['name']: col['type'] for col in raw_rows[pos + 1:]
+            col['name'].split(":")[0].strip(): col['type'].strip() for col in raw_rows[pos + 1:]
+            if col['name'] and not col['name'].startswith('#') and not col['name'] == '' and col['type']
         }
 
         raw_table_stats = metadata.get(KEY_TABLE_STATISTICS)
