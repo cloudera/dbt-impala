@@ -36,13 +36,15 @@ import json
 import hashlib
 import threading
 
+DEFAULT_IMPALA_HOST = "localhost"
 DEFAULT_IMPALA_PORT = 21050
 DEFAULT_MAX_RETRIES = 3
 
 @dataclass
 class ImpalaCredentials(Credentials):
-    host: str
-    database: Optional[str]
+    host: str = DEFAULT_IMPALA_HOST
+    schema: str = None
+    database: Optional[str] = None
     port: Optional[int] = DEFAULT_IMPALA_PORT
     username: Optional[str] = None
     password: Optional[str] = None
@@ -79,7 +81,7 @@ class ImpalaCredentials(Credentials):
                 f'On Impala, database must be omitted or have the same value as'
                 f' schema.'
             )
-        self.database = self.schema
+        self.database = None
 
     @property
     def type(self):
