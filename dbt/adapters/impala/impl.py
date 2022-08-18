@@ -25,6 +25,7 @@ import dbt.exceptions
 from dbt.exceptions import warn_or_error
 from dbt.contracts.relation import RelationType
 
+from dbt.adapters.base.impl import catch_as_completed
 from dbt.adapters.impala.column import ImpalaColumn
 from dbt.adapters.impala.relation import ImpalaRelation
 
@@ -33,6 +34,8 @@ from dbt.events import AdapterLogger
 from dbt.clients.agate_helper import DEFAULT_TYPE_TESTER, ColumnTypeBuilder, NullableAgateType, _NullMarker
 from dbt.utils import executor
 from concurrent.futures import as_completed, Future
+
+from dbt.clients import agate_helper
 
 logger = AdapterLogger("Impala")
 
@@ -323,18 +326,16 @@ class ImpalaAdapter(SQLAdapter):
     def get_catalog(self, manifest):
         schema_map = self._get_catalog_schemas(manifest)
 
+
         with executor(self.config) as tpe:
             futures: List[Future[agate.Table]] = []
             for info, schemas in schema_map.items():
                 for schema in schemas:
-                    for relation in self.list_relations(info.database, schema):
-                        name = '.'.join([str(relation.database), str(relation.schema), str(relation.name)])
-
-                        futures.append(tpe.submit_connected(
-                            self, name,
-                            self._get_one_catalog, relation, '.'.join([str(relation.database), str(relation.schema)])
+                    futures.append(tpe.submit_connected(
+                            self, schema,
+                            self._get_one_catalog, info, [schema], manifest
                         ))
-            catalogs, exceptions = ImpalaAdapter._catch_as_completed(futures)
+            catalogs, exceptions = catch_as_completed(futures) # call the default implementation 
 
         return catalogs, exceptions
 
@@ -362,26 +363,36 @@ class ImpalaAdapter(SQLAdapter):
             return defaultType
 
     def _get_one_catalog(
-        self, relation, unique_id
+        self, information_schema, schemas, manifest
     ) -> agate.Table:
+
+        if len(schemas) != 1:
+            dbt.exceptions.raise_compiler_error(
+                f'Expected only one schema in ImpalaAdapter._get_one_catalog, found '
+                f'{schemas}'
+            )
+
+        schema = list(schemas)[0]
         
         columns: List[Dict[str, Any]] = []
 
-        columns.extend(self._get_columns_for_catalog(relation, unique_id))
+        relation_list = self.list_relations(None, schema)
 
-        tableFromCols = agate.Table.from_object(
-            columns, column_types=DEFAULT_TYPE_TESTER
+        for relation in relation_list:
+            columns.extend(self._get_columns_for_catalog(relation))
+
+        if len(columns) > 0:
+            text_types = agate_helper.build_type_tester(["table_database", "table_schema", "table_name"])
+        else:
+            text_types = []
+
+        return agate.Table.from_object(
+            columns,
+            column_types = text_types
         )
 
-        colNames = list(map(lambda x: x['column_name'], columns))
-        colTypes = list(map(lambda x: self._get_datatype(x['column_type']), columns))
-
-        tableFromCols = agate.Table([], column_names=colNames, column_types=colTypes)
-
-        return tableFromCols 
-
     def _get_columns_for_catalog(
-        self, relation: ImpalaRelation, unique_id
+        self, relation: ImpalaRelation
     ) -> Iterable[Dict[str, Any]]:
         columns = self.get_columns_in_relation(relation)
 
