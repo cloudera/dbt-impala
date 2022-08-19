@@ -151,8 +151,7 @@ class ImpalaAdapter(SQLAdapter):
         return relations
 
     def get_columns_in_relation(self, relation: Relation) -> List[ImpalaColumn]:
-        cached_relations = self.cache.get_relations(
-            relation.database, relation.schema)
+        cached_relations = self.cache.get_relations(relation.database, relation.schema)
         cached_relation = next((cached_relation
                                 for cached_relation in cached_relations
                                 if str(cached_relation) == str(relation)),
@@ -260,71 +259,6 @@ class ImpalaAdapter(SQLAdapter):
 
         return columns
 
-    def _merged_column_types(
-        tables: List[agate.Table]
-    ) -> Dict[str, agate.data_types.DataType]:
-        # this is a lot like agate.Table.merge, but with handling for all-null
-        # rows being "any type".
-        new_columns: ColumnTypeBuilder = ColumnTypeBuilder()
-        for table in tables:
-            for i in range(len(table.columns)):
-                column_name: str = table.column_names[i]
-                column_type: NullableAgateType = table.column_types[i]
-                # avoid over-sensitive type inference
-                if all(x is None for x in table.columns[column_name]):
-                    column_type = _NullMarker()
-                
-                new_columns[column_name] = column_type
-
-        return new_columns.finalize()
-
-    def _merge_tables(tables: List[agate.Table]) -> agate.Table:
-        new_columns = ImpalaAdapter._merged_column_types(tables)
-        column_names = tuple(new_columns.keys())
-        column_types = tuple(new_columns.values())
-
-        rows: List[agate.Row] = []
-        for table in tables:
-            if (
-                table.column_names == column_names and
-                table.column_types == column_types
-            ):
-                rows.extend(table.rows)
-            else:
-                for row in table.rows:
-                    data = [row.get(name, None) for name in column_names]
-                    rows.append(agate.Row(data, column_names))
-        # _is_fork to tell agate that we already made things into `Row`s.
-        return agate.Table(rows, column_names, column_types, _is_fork=True)
-
-    def _catch_as_completed(
-        futures  # typing: List[Future[agate.Table]]
-    ) -> Tuple[agate.Table, List[Exception]]:
-
-        # catalogs: agate.Table = agate.Table(rows=[])
-        tables: List[agate.Table] = []
-        exceptions: List[Exception] = []
-
-        for future in as_completed(futures):
-            exc = future.exception()
-            # we want to re-raise on ctrl+c and BaseException
-            if exc is None:
-                catalog = future.result()
-                tables.append(catalog)
-            elif (
-                isinstance(exc, KeyboardInterrupt) or
-                not isinstance(exc, Exception)
-            ):
-                raise exc
-            else:
-                warn_or_error(
-                    f'Encountered an error while generating catalog: {str(exc)}'
-                )
-                # exc is not None, derives from Exception, and isn't ctrl+c
-                exceptions.append(exc)
-
-        return ImpalaAdapter._merge_tables(tables), exceptions
-
     def get_catalog(self, manifest):
         schema_map = self._get_catalog_schemas(manifest)
 
@@ -340,29 +274,6 @@ class ImpalaAdapter(SQLAdapter):
             catalogs, exceptions = catch_as_completed(futures) # call the default implementation 
 
         return catalogs, exceptions
-
-    def _get_datatype(self, col_type):
-        defaultType = agate.data_types.Text(null_values=('null', ''))
-
-        datatypeMap = {
-            'int': agate.data_types.Number(null_values=('null', '')),
-            'double': agate.data_types.Number(null_values=('null', '')),
-            'timestamp': agate.data_types.DateTime(null_values=('null', ''), datetime_format='%Y-%m-%d %H:%M:%S'),
-            'date': agate.data_types.Date(null_values=('null', ''), date_format='%Y-%m-%d'),
-            'boolean': agate.data_types.Boolean(true_values=('true',), false_values=('false',), null_values=('null', '')),
-            'text': defaultType,
-            'string': defaultType
-        }
-
-        try:
-            dt = datatypeMap[col_type]
-
-            if (dt == None): 
-                return defaultType
-            else:
-                return dt
-        except:
-            return defaultType
 
     def _get_one_catalog(
         self, information_schema, schemas, manifest
