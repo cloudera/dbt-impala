@@ -249,8 +249,11 @@
 {% macro impala__rename_relation(from_relation, to_relation) -%}
   {% set from_rel_type = get_relation_type(from_relation) %}
   
-  {% call statement('drop_relation') %}
-    drop {{ from_rel_type }} if exists {{ to_relation }}
+  {% call statement('drop_relation_if_exists_table') %}
+    drop table if exists {{ to_relation }}
+  {% endcall %}
+  {% call statement('drop_relation_if_exists_view') %}
+    drop view if exists {{ to_relation }};
   {% endcall %}
   {% call statement('rename_relation') -%}
     {% if not from_rel_type %}
