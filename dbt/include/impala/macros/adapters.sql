@@ -200,10 +200,12 @@
 {% endmacro %}
 
 {% macro impala__drop_relation(relation) -%}
-  {% set rel_type = get_relation_type(relation) %}
-  {% call statement('drop_relation', auto_begin=False) -%}
-    drop {{ rel_type }} if exists {{ relation }}
-  {%- endcall %}
+  {% call statement('drop_relation_if_exists_table') %}
+    drop table if exists {{ relation }}
+  {% endcall %}
+  {% call statement('drop_relation_if_exists_view') %}
+    drop view if exists {{ relation }}
+  {% endcall %}
 {% endmacro %}
 
 {% macro is_relation_present(relation) -%}

@@ -91,6 +91,8 @@
   {% set trigger_full_refresh = (full_refresh_mode or existing_relation.is_view) %}
 
   {% if existing_relation is none %}
+      {# -- ensure that the target_relation is dropped before trying to create it #}
+      {{ drop_relation_if_exists(target_relation) }}
       {% set build_sql = create_table_as(False, target_relation, sql) %}
   {% elif trigger_full_refresh %}
       {#-- Make sure the backup doesn't exist so we don't encounter issues with the rename below #}
@@ -98,6 +100,9 @@
       {% set backup_identifier = model['name'] + '__' + time_stamp  + '__dbt_backup' %}
       {% set intermediate_relation = existing_relation.incorporate(path={"identifier": tmp_identifier}) %}
       {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
+
+      {# -- ensure that the intermediate_relation is dropped before trying to create it #}
+      {{ drop_relation_if_exists(intermediate_relation) }}
 
       {% set build_sql = create_table_as(False, intermediate_relation, sql) %}
       {% set need_swap = true %}
