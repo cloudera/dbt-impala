@@ -331,6 +331,10 @@
     insert into {{target_relation}} ({{insert_cols_csv}}) select {{insert_cols_csv}} from {{staging_table}}
 {% endmacro %}
 
+{% macro impala__generate_database_name(custom_database_name=none, node=none) -%}
+  {% do return(None) %}
+{%- endmacro %}
+
 /* snapshots flow for impala */
 {% materialization snapshot, adapter='impala' %}
   {%- set config = model['config'] -%}
