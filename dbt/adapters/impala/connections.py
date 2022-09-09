@@ -36,6 +36,8 @@ import json
 import hashlib
 import threading
 
+from dbt.adapters.impala.__version__ import version as ADAPTER_VERSION
+
 DEFAULT_IMPALA_HOST = "localhost"
 DEFAULT_IMPALA_PORT = 21050
 DEFAULT_MAX_RETRIES = 3
@@ -125,6 +127,8 @@ class ImpalaConnectionManager(SQLConnectionManager):
         try:
             # the underlying dbapi supports retries, so this is directly used instead to support retries 
             if (credentials.auth_type == "LDAP" or credentials.auth_type == "ldap"): # ldap connection
+                custom_user_agent = 'dbt/cloudera-impala-v' + ADAPTER_VERSION
+                logger.debug("Using user agent: {}".format(custom_user_agent))
                 handle = impala.dbapi.connect(
                     host=credentials.host,
                     port=credentials.port,
@@ -134,7 +138,8 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     password=credentials.password,
                     use_ssl=credentials.use_ssl,
                     http_path=credentials.http_path,
-                    retries=credentials.retries
+                    retries=credentials.retries,
+                    user_agent=custom_user_agent
                 )
                 auth_type = "ldap"
             elif (credentials.auth_type == "GSSAPI" or credentials.auth_type == "gssapi" or credentials.auth_type == "kerberos"): # kerberos based connection
@@ -157,8 +162,10 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             connection.state = 'open'
             connection.handle = handle
-        except:
-            logger.debug("Connection error")
+        except Exception as err:
+            import traceback
+            traceback.print_exc(err)
+            logger.debug("Connection error: {}".format("".join(traceback.format_exception(type(err), err, err.__traceback__))))
             connection.state = 'fail'
             connection.handle = None
             pass
