@@ -18,7 +18,9 @@ import platform
 import requests
 import sys
 import threading
+import dbt.adapters.impala.__version__ as ver
 
+from dbt.adapters.base import Credentials
 from dbt.events import AdapterLogger
 from decouple import config
 
@@ -32,8 +34,8 @@ usage_tracking: bool = True
 platform_info = {}
 
 
-def populate_platform_info():
-    # Python version e.g: ['2.6.5 (r265:79063, Oct  1 2012, 22:04:36) ', '[GCC 4.4.3]']
+def populate_platform_info(self):
+    # Python version e.g: 2.6.5
     platform_info["python_version"] = sys.version.split()[0]
     # Underlying system e.g. : Linux, Darwin(Mac), Windows
     platform_info["system"] = platform.system()
@@ -45,11 +47,11 @@ def populate_platform_info():
     platform_info[
         "dbt_version"
     ] = dbt.version.get_installed_version().to_version_string(skip_matcher=True)
-    # dbt plugins and additional info
-    platform_info["dbt_plugins"] = dbt.version.get_version_information()
-
+    # dbt adapter info e.g. impala-1.2.0
+    platform_info["dbt_adapter"] = f"{self.type}-{ver.version}"
     # TODO: clean/remove this when implementing model or connection specific tracking
     logger.debug(json.dumps(platform_info, indent=2))
+
 
 def track_usage(tracking_payload):
     """
