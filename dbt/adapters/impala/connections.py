@@ -81,6 +81,8 @@ class ImpalaCredentials(Credentials):
 
         # set the usage tracking flag
         tracker.usage_tracking = self.usage_tracking
+        # get platform information for tracking
+        tracker.populate_platform_info()
 
     @property
     def type(self):

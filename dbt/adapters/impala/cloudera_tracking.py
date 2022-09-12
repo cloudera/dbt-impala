@@ -12,20 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dbt.version
 import json
+import platform
 import requests
+import sys
 import threading
 
-from decouple import config
-
 from dbt.events import AdapterLogger
+from decouple import config
 
 # global logger
 logger = AdapterLogger("Tracker")
 
-# global switch to trun on/off the usage tracking
+# global switch to turn on/off the usage tracking
 usage_tracking: bool = True
 
+# Json object to store OS and platform related information
+platform_info = {}
+
+
+def populate_platform_info():
+    # Python version e.g: ['2.6.5 (r265:79063, Oct  1 2012, 22:04:36) ', '[GCC 4.4.3]']
+    platform_info["python_version"] = sys.version.split()[0]
+    # Underlying system e.g. : Linux, Darwin(Mac), Windows
+    platform_info["system"] = platform.system()
+    # Architecture e.g. x86_64 ,arm, AMD64
+    platform_info["machine"] = platform.machine()
+    # Full platform info e.g Linux-2.6.32-32-server-x86_64-with-Ubuntu-10.04-lucid,Windows-2008ServerR2-6.1.7601-SP1
+    platform_info["platform"] = platform.platform()
+    # dbt core version
+    platform_info[
+        "dbt_version"
+    ] = dbt.version.get_installed_version().to_version_string(skip_matcher=True)
+    # dbt plugins and additional info
+    platform_info["dbt_plugins"] = dbt.version.get_version_information()
+
+    # TODO: clean/remove this when implementing model or connection specific tracking
+    print(json.dumps(platform_info, indent=2))
 
 def track_usage(tracking_payload):
     """
@@ -49,8 +73,7 @@ def track_usage(tracking_payload):
     # inject other static payload to tracking_payload
 
     # form the tracking data
-    tracking_data = {}
-    tracking_data["data"] = tracking_payload
+    tracking_data = {"data": tracking_payload}
 
     # inner function which actually calls the endpoint
     def _tracking_func(data):
@@ -65,6 +88,7 @@ def track_usage(tracking_payload):
             logger.debug(f"Error reading tracking config. {err}")
             logger.debug("Disabling usage tracking due to error.")
             usage_tracking = False
+            return
 
         # prod creds
         headers = {
