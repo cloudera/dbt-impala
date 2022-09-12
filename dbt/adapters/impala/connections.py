@@ -32,6 +32,8 @@ from dbt.logger import GLOBAL_LOGGER as logger
 
 import impala.dbapi
 
+import dbt.adapters.impala.cloudera_tracking as tracker
+
 import json
 import hashlib
 import threading
@@ -82,6 +84,9 @@ class ImpalaCredentials(Credentials):
                 f' schema.'
             )
         self.database = None
+
+        # set the usage tracking flag
+        tracker.usage_tracking = self.usage_tracking
 
     @property
     def type(self):
@@ -163,21 +168,14 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection.handle = None
             pass
 
-        try:
-            if (credentials.usage_tracking): 
-               tracking_data = {}
-               payload = {}
-               payload["id"] = "dbt_impala_open"
-               payload["unique_hash"] = hashlib.md5(credentials.host.encode()).hexdigest()
-               payload["auth"] = auth_type
-               payload["connection_state"] = connection.state
+        # track usage
+        payload = {}
+        payload["id"] = "dbt_impala_open"
+        payload["unique_hash"] = hashlib.md5(credentials.host.encode()).hexdigest()
+        payload["auth"] = auth_type
+        payload["connection_state"] = connection.state
 
-               tracking_data["data"] = payload
-
-               the_track_thread = threading.Thread(target=track_usage, kwargs={"data": tracking_data})
-               the_track_thread.start()
-        except:
-            logger.debug("Usage tracking error")
+        tracker.track_usage(payload)
 
         return connection
 
@@ -242,21 +240,4 @@ class ImpalaConnectionManager(SQLConnectionManager):
             )
 
             return connection, cursor
-
-# usage tracking code - Cloudera specific 
-def track_usage(data):
-   import requests 
-   from decouple import config
-
-   SNOWPLOW_ENDPOINT = config('SNOWPLOW_ENDPOINT')
-   SNOWPLOW_TIMEOUT  = int(config('SNOWPLOW_TIMEOUT')) # 10 seconds
-
-   # prod creds
-   headers = {'x-api-key': config('SNOWPLOW_API_KEY'), 'x-datacoral-environment': config('SNOWPLOW_ENNV'), 'x-datacoral-passthrough': 'true'}
-
-   data = json.dumps([data])
-
-   res = requests.post(SNOWPLOW_ENDPOINT, data = data, headers = headers, timeout = SNOWPLOW_TIMEOUT)
-
-   return res
 
