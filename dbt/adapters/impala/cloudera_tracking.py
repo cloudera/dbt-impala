@@ -49,7 +49,7 @@ def populate_platform_info():
     platform_info["dbt_plugins"] = dbt.version.get_version_information()
 
     # TODO: clean/remove this when implementing model or connection specific tracking
-    print(json.dumps(platform_info, indent=2))
+    logger.debug(json.dumps(platform_info, indent=2))
 
 def track_usage(tracking_payload):
     """
