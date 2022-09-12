@@ -12,17 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import unique
 import dbt.version
 import json
 import platform
 import requests
 import sys
+import time
+import hashlib
 import threading
+from dbt.tracking import active_user
 import dbt.adapters.impala.__version__ as ver
 
 from dbt.adapters.base import Credentials
 from dbt.events import AdapterLogger
 from decouple import config
+
 
 # global logger
 logger = AdapterLogger("Tracker")
@@ -33,6 +38,8 @@ usage_tracking: bool = True
 # Json object to store OS and platform related information
 platform_info = {}
 
+# Json object to store unique ID
+unique_ids = {}
 
 def populate_platform_info(cred: Credentials):
     # Python version e.g: 2.6.5
@@ -52,6 +59,24 @@ def populate_platform_info(cred: Credentials):
     # TODO: clean/remove this when implementing model or connection specific tracking
     logger.debug(json.dumps(platform_info, indent=2))
 
+def populate_unique_ids(cred: Credentials):
+    host = str(cred.host).encode()
+    user = str(cred.username).encode()
+    timestamp = str(time.time()).encode()
+
+    # hashed host name
+    unique_ids["unique_host_hash"] = hashlib.md5(host).hexdigest()
+    # hashed user name
+    unique_ids["unique_user_hash"] = hashlib.md5(user).hexdigest()
+    # hashed session
+    unique_ids["unique_session_hash"] = hashlib.md5(host + user + timestamp).hexdigest()
+    # hashed dbt invocation id
+    unique_ids["id"] = active_user.invocation_id
+
+def _merge_keys(source_dict, dest_dict):
+    for key, value in source_dict.items():
+        dest_dict[key] = value
+    return dest_dict
 
 def track_usage(tracking_payload):
     """
@@ -73,6 +98,8 @@ def track_usage(tracking_payload):
         return
 
     # inject other static payload to tracking_payload
+    tracking_payload = _merge_keys(platform_info, tracking_payload)
+    tracking_payload = _merge_keys(unique_ids, tracking_payload)
 
     # form the tracking data
     tracking_data = {"data": tracking_payload}
