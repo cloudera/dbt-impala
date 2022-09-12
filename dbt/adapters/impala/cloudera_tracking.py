@@ -34,7 +34,7 @@ usage_tracking: bool = True
 platform_info = {}
 
 
-def populate_platform_info(self):
+def populate_platform_info(cred: Credentials):
     # Python version e.g: 2.6.5
     platform_info["python_version"] = sys.version.split()[0]
     # Underlying system e.g. : Linux, Darwin(Mac), Windows
@@ -48,7 +48,7 @@ def populate_platform_info(self):
         "dbt_version"
     ] = dbt.version.get_installed_version().to_version_string(skip_matcher=True)
     # dbt adapter info e.g. impala-1.2.0
-    platform_info["dbt_adapter"] = f"{self.type}-{ver.version}"
+    platform_info["dbt_adapter"] = f"{cred.type}-{ver.version}"
     # TODO: clean/remove this when implementing model or connection specific tracking
     logger.debug(json.dumps(platform_info, indent=2))
 
