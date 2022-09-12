@@ -54,13 +54,22 @@ def track_usage(tracking_payload):
 
     # inner function which actually calls the endpoint
     def _tracking_func(data):
-        SNOWPLOW_ENDPOINT = config("SNOWPLOW_ENDPOINT")
-        SNOWPLOW_TIMEOUT = int(config("SNOWPLOW_TIMEOUT"))  # 10 seconds
+        global usage_tracking
+
+        try:
+            SNOWPLOW_ENDPOINT = config("SNOWPLOW_ENDPOINT")
+            SNOWPLOW_TIMEOUT = int(config("SNOWPLOW_TIMEOUT"))  # 10 seconds
+            SNOWPLOW_API_KEY = config("SNOWPLOW_API_KEY")
+            SNOWPLOW_ENV = config("SNOWPLOW_ENV")
+        except Exception as err:
+            logger.debug(f"Error reading tracking config. {err}")
+            logger.debug("Disabling usage tracking due to error.")
+            usage_tracking = False
 
         # prod creds
         headers = {
-            "x-api-key": config("SNOWPLOW_API_KEY"),
-            "x-datacoral-environment": config("SNOWPLOW_ENNV"),
+            "x-api-key": SNOWPLOW_API_KEY,
+            "x-datacoral-environment": SNOWPLOW_ENV,
             "x-datacoral-passthrough": "true",
         }
 
@@ -75,6 +84,8 @@ def track_usage(tracking_payload):
             )
         except Exception as err:
             logger.debug(f"Usage tracking error. {err}")
+            logger.debug("Disabling usage tracking due to error.")
+            usage_tracking = False
 
         return res
 
