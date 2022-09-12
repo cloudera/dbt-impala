@@ -32,6 +32,7 @@ from dbt.logger import GLOBAL_LOGGER as LOGGER
 
 import impala.dbapi
 
+import dbt.adapters.impala.__version__ as ver
 import dbt.adapters.impala.cloudera_tracking as tracker
 
 import json
@@ -82,7 +83,7 @@ class ImpalaCredentials(Credentials):
         # set the usage tracking flag
         tracker.usage_tracking = self.usage_tracking
         # get platform information for tracking
-        tracker.populate_platform_info(self)
+        tracker.populate_platform_info(self, ver)
 
     @property
     def type(self):

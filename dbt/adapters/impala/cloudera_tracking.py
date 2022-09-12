@@ -18,7 +18,6 @@ import platform
 import requests
 import sys
 import threading
-import dbt.adapters.impala.__version__ as ver
 
 from dbt.adapters.base import Credentials
 from dbt.events import AdapterLogger
@@ -34,7 +33,12 @@ usage_tracking: bool = True
 platform_info = {}
 
 
-def populate_platform_info(cred: Credentials):
+def populate_platform_info(cred: Credentials, ver):
+    """
+    populate platform info to be passed on for tracking
+    @param cred DBT cred object, representing the dbt profile
+    @param ver DBT adapter version 
+    """
     # Python version e.g: 2.6.5
     platform_info["python_version"] = sys.version.split()[0]
     # Underlying system e.g. : Linux, Darwin(Mac), Windows
@@ -73,6 +77,8 @@ def track_usage(tracking_payload):
         return
 
     # inject other static payload to tracking_payload
+    for key, value in platform_info.items():
+        tracking_payload[key] = value
 
     # form the tracking data
     tracking_data = {"data": tracking_payload}
