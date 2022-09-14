@@ -36,8 +36,6 @@ import dbt.adapters.impala.__version__ as ver
 import dbt.adapters.impala.cloudera_tracking as tracker
 
 import json
-import hashlib
-import threading
 
 DEFAULT_IMPALA_HOST = "localhost"
 DEFAULT_IMPALA_PORT = 21050
@@ -123,6 +121,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             return connection
 
         credentials = connection.credentials
+        connection_ex = None 
 
         auth_type = "insecure"
 
@@ -171,6 +170,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection.handle = handle
         except Exception as ex:
             LOGGER.debug("Connection error {}".format(ex))
+            connection_ex = ex
             connection.state = ConnectionState.FAIL
             connection.handle = None
             connection_end_time = time.time()
@@ -182,6 +182,9 @@ class ImpalaConnectionManager(SQLConnectionManager):
             "connection_state": connection.state,
             "elapsed_time": "{:.2f}".format(connection_end_time - connection_start_time),
         }
+
+        if (connection.state == ConnectionState.FAIL):
+            payload["connection_exception"] = "{}".format(connection_ex)
 
         tracker.track_usage(payload)
 
@@ -198,8 +201,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection = super().close(connection)
             connection_close_end_time = time.time()
 
-            credentials = connection.credentials
-
             payload = {
                 "event_type": "dbt_impala_close",
                 "connection_state": ConnectionState.CLOSED,
@@ -210,7 +211,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             return connection
         except Exception as err:
-            logger.debug(f"Error closing connection {err}")
+            LOGGER.debug(f"Error closing connection {err}")
 
     @classmethod
     def get_response(cls, cursor):
@@ -251,7 +252,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
                 additional_info = json.loads(self.query_header.comment.query_comment.strip())
             except Exception as ex:  # silently ignore error for parsing
                 additional_info = {}
-                logger.debug(f"Unable to get query header {ex}")
+                LOGGER.debug(f"Unable to get query header {ex}")
 
         with self.exception_handler(sql):
             if abridge_sql_log:
