@@ -252,8 +252,9 @@ class ImpalaConnectionManager(SQLConnectionManager):
         if self.query_header:
             try:
                 additional_info = json.loads(self.query_header.comment.query_comment.strip())
-            except Exception:  # silently ignore error for parsing
+            except Exception as ex:  # silently ignore error for parsing
                 additional_info = {}
+                logger.debug(f"Unable to get query header {ex}")
 
         with self.exception_handler(sql):
             if abridge_sql_log:
