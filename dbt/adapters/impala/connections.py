@@ -20,6 +20,7 @@ import dbt.exceptions
 
 from dbt.adapters.base import Credentials
 from dbt.adapters.sql import SQLConnectionManager
+from dbt.contracts.connection import AdapterRequiredConfig
 
 from typing import Optional, Tuple, Any
 
@@ -103,12 +104,17 @@ class ImpalaCredentials(Credentials):
 class ImpalaConnectionManager(SQLConnectionManager):
     TYPE = "impala"
 
+    def __init__(self, profile: AdapterRequiredConfig):
+        super().__init__(profile)
+        # generate profile related object for instrumentation.
+        tracker.generate_profile_info(self)
+
     @contextmanager
     def exception_handler(self, sql: str):
         try:
             yield
         except impala.dbapi.DatabaseError as exc:
-            LOGGER.debug("dbt-impala error: {}".format(str(e)))
+            LOGGER.debug("dbt-impala error: {}".format(str(exc)))
             raise dbt.exceptions.DatabaseException(str(exc))
         except Exception as exc:
             LOGGER.debug("Error running SQL: {}".format(sql))
@@ -121,7 +127,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             return connection
 
         credentials = connection.credentials
-        connection_ex = None 
+        connection_ex = None
 
         auth_type = "insecure"
 
@@ -174,16 +180,18 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection.state = ConnectionState.FAIL
             connection.handle = None
             connection_end_time = time.time()
-            
+
         # track usage
         payload = {
             "event_type": "dbt_impala_open",
             "auth": auth_type,
             "connection_state": connection.state,
-            "elapsed_time": "{:.2f}".format(connection_end_time - connection_start_time),
+            "elapsed_time": "{:.2f}".format(
+                connection_end_time - connection_start_time
+            ),
         }
 
-        if (connection.state == ConnectionState.FAIL):
+        if connection.state == ConnectionState.FAIL:
             payload["connection_exception"] = "{}".format(connection_ex)
 
         tracker.track_usage(payload)
@@ -204,7 +212,9 @@ class ImpalaConnectionManager(SQLConnectionManager):
             payload = {
                 "event_type": "dbt_impala_close",
                 "connection_state": ConnectionState.CLOSED,
-                "elapsed_time": "{:.2f}".format(connection_close_end_time - connection_close_start_time),
+                "elapsed_time": "{:.2f}".format(
+                    connection_close_end_time - connection_close_start_time
+                ),
             }
 
             tracker.track_usage(payload)
@@ -240,7 +250,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
             bindings: Optional[Any] = None,
             abridge_sql_log: bool = False,
     ) -> Tuple[Connection, Any]:
-
         connection = self.get_thread_connection()
         if auto_begin and connection.transaction_open is False:
             self.begin()
