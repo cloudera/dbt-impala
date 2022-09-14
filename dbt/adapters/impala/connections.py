@@ -23,7 +23,7 @@ from dbt.adapters.sql import SQLConnectionManager
 
 from typing import Optional, Tuple, Any
 
-from dbt.contracts.connection import Connection, AdapterResponse
+from dbt.contracts.connection import Connection, AdapterResponse, ConnectionState
 
 from dbt.events.functions import fire_event
 from dbt.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
@@ -32,6 +32,7 @@ from dbt.logger import GLOBAL_LOGGER as LOGGER
 
 import impala.dbapi
 
+import dbt.adapters.impala.__version__ as ver
 import dbt.adapters.impala.cloudera_tracking as tracker
 
 import json
@@ -82,7 +83,7 @@ class ImpalaCredentials(Credentials):
         # set the usage tracking flag
         tracker.usage_tracking = self.usage_tracking
         # get platform information for tracking
-        tracker.populate_platform_info(self)
+        tracker.populate_platform_info(self, ver)
         # generate unique ids for tracking
         tracker.populate_unique_ids(self)
 
@@ -117,7 +118,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
     @classmethod
     def open(cls, connection):
-        if connection.state == "open":
+        if connection.state == ConnectionState.OPEN:
             LOGGER.debug("Connection is already open, skipping open.")
             return connection
 
@@ -126,6 +127,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
         auth_type = "insecure"
 
         try:
+            connection_start_time = time.time()
             # the underlying dbapi supports retries, so this is directly used instead to support retries
             if (
                     credentials.auth_type == "LDAP" or credentials.auth_type == "ldap"
@@ -163,24 +165,55 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     port=credentials.port,
                     retries=credentials.retries,
                 )
+            connection_end_time = time.time()
 
-            connection.state = "open"
+            connection.state = ConnectionState.OPEN
             connection.handle = handle
         except Exception as ex:
             LOGGER.debug("Connection error {}".format(ex))
-            connection.state = "fail"
+            connection.state = ConnectionState.FAIL
             connection.handle = None
-
+            connection_end_time = time.time()
+            
         # track usage
         payload = {
             "event_type": "dbt_impala_open",
             "auth": auth_type,
+            "connection_name": connection.name,
             "connection_state": connection.state,
+            "elapsed_time": "{:.2f}".format(connection_end_time - connection_start_time),
         }
 
         tracker.track_usage(payload)
 
         return connection
+
+    @classmethod
+    def close(cls, connection):
+        try:
+            # if the connection is in closed or init, there's nothing to do
+            if connection.state in {ConnectionState.CLOSED, ConnectionState.INIT}:
+                return connection
+
+            connection_close_start_time = time.time()
+            connection = super().close(connection)
+            connection_close_end_time = time.time()
+
+            credentials = connection.credentials
+
+            payload = {
+                "id": "dbt_impala_close",
+                "unique_hash": hashlib.md5((str(credentials.host) + str(credentials.username)).encode()).hexdigest(),
+                "connection_name": connection.name,
+                "connection_state": ConnectionState.CLOSED,
+                "elapsed_time": "{:.2f}".format(connection_close_end_time - connection_close_start_time),
+            }
+
+            tracker.track_usage(payload)
+
+            return connection
+        except Exception as err:
+            logger.debug(f"Error closing connection {err}")
 
     @classmethod
     def get_response(cls, cursor):

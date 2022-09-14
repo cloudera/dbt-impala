@@ -41,7 +41,12 @@ platform_info = {}
 # Json object to store unique ID
 unique_ids = {}
 
-def populate_platform_info(cred: Credentials):
+def populate_platform_info(cred: Credentials, ver):
+    """
+    populate platform info to be passed on for tracking
+    @param cred DBT cred object, representing the dbt profile
+    @param ver DBT adapter version 
+    """
     # Python version e.g: 2.6.5
     platform_info["python_version"] = sys.version.split()[0]
     # Underlying system e.g. : Linux, Darwin(Mac), Windows
