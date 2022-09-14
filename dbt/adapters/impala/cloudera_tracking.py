@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import unique
 import dbt.version
 import json
 import platform
@@ -22,7 +21,6 @@ import time
 import hashlib
 import threading
 from dbt.tracking import active_user
-import dbt.adapters.impala.__version__ as ver
 
 from dbt.adapters.base import Credentials
 from dbt.events import AdapterLogger
@@ -41,11 +39,15 @@ platform_info = {}
 # Json object to store unique ID
 unique_ids = {}
 
+# Json object to store dbt profile(profile.yml) related information
+profile_info = {}
+
+
 def populate_platform_info(cred: Credentials, ver):
     """
     populate platform info to be passed on for tracking
     @param cred DBT cred object, representing the dbt profile
-    @param ver DBT adapter version 
+    @param ver DBT adapter version
     """
     # Python version e.g: 2.6.5
     platform_info["python_version"] = sys.version.split()[0]
@@ -61,27 +63,38 @@ def populate_platform_info(cred: Credentials, ver):
     ] = dbt.version.get_installed_version().to_version_string(skip_matcher=True)
     # dbt adapter info e.g. impala-1.2.0
     platform_info["dbt_adapter"] = f"{cred.type}-{ver.version}"
-    # TODO: clean/remove this when implementing model or connection specific tracking
-    logger.debug(json.dumps(platform_info, indent=2))
+
 
 def populate_unique_ids(cred: Credentials):
     host = str(cred.host).encode()
     user = str(cred.username).encode()
     timestamp = str(time.time()).encode()
 
+    # dbt invocation id
+    unique_ids["id"] = active_user.invocation_id
     # hashed host name
     unique_ids["unique_host_hash"] = hashlib.md5(host).hexdigest()
-    # hashed user name
+    # hashed username
     unique_ids["unique_user_hash"] = hashlib.md5(user).hexdigest()
     # hashed session
     unique_ids["unique_session_hash"] = hashlib.md5(host + user + timestamp).hexdigest()
-    # hashed dbt invocation id
-    unique_ids["id"] = active_user.invocation_id
+
+
+def generate_profile_info(self):
+    if not profile_info:
+        # name of dbt project in profiles
+        profile_info["project_name"] = self.profile.profile_name
+        # dbt target in profiles
+        profile_info["target_name"] = self.profile.target_name
+        # number of threads in profiles
+        profile_info["no_of_threads"] = self.profile.threads
+
 
 def _merge_keys(source_dict, dest_dict):
     for key, value in source_dict.items():
         dest_dict[key] = value
     return dest_dict
+
 
 def track_usage(tracking_payload):
     """
@@ -105,6 +118,7 @@ def track_usage(tracking_payload):
     # inject other static payload to tracking_payload
     tracking_payload = _merge_keys(platform_info, tracking_payload)
     tracking_payload = _merge_keys(unique_ids, tracking_payload)
+    tracking_payload = _merge_keys(profile_info, tracking_payload)
 
     # form the tracking data
     tracking_data = {"data": tracking_payload}
