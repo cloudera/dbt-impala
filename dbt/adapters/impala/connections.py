@@ -179,7 +179,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
         payload = {
             "event_type": "dbt_impala_open",
             "auth": auth_type,
-            "connection_name": connection.name,
             "connection_state": connection.state,
             "elapsed_time": "{:.2f}".format(connection_end_time - connection_start_time),
         }
@@ -202,9 +201,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             credentials = connection.credentials
 
             payload = {
-                "id": "dbt_impala_close",
-                "unique_hash": hashlib.md5((str(credentials.host) + str(credentials.username)).encode()).hexdigest(),
-                "connection_name": connection.name,
+                "event_type": "dbt_impala_close",
                 "connection_state": ConnectionState.CLOSED,
                 "elapsed_time": "{:.2f}".format(connection_close_end_time - connection_close_start_time),
             }
@@ -266,7 +263,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
             payload = {
                 "event_type": "dbt_impala_start_query",
                 "sql": log_sql,
-                "connection_name": connection.name,
                 "profile_name": self.profile.profile_name
             }
 
@@ -295,7 +291,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
                 "sql": log_sql,
                 "elapsed_time": "{:.2f}".format(elapsed_time),
                 "status": query_status,
-                "connection_name": connection.name,
                 "profile_name": self.profile.profile_name
             }
 
