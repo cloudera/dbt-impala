@@ -84,6 +84,8 @@ class ImpalaCredentials(Credentials):
         tracker.usage_tracking = self.usage_tracking
         # get platform information for tracking
         tracker.populate_platform_info(self, ver)
+        # generate unique ids for tracking
+        tracker.populate_unique_ids(self)
 
     @property
     def type(self):
@@ -172,14 +174,11 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection.state = ConnectionState.FAIL
             connection.handle = None
             connection_end_time = time.time()
-            pass
-
+            
         # track usage
         payload = {
-            "id": "dbt_impala_open",
-            "unique_hash": hashlib.md5((str(credentials.host) + str(credentials.username)).encode()).hexdigest(),
+            "event_type": "dbt_impala_open",
             "auth": auth_type,
-            "connection_name": connection.name,
             "connection_state": connection.state,
             "elapsed_time": "{:.2f}".format(connection_end_time - connection_start_time),
         }
@@ -202,9 +201,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             credentials = connection.credentials
 
             payload = {
-                "id": "dbt_impala_close",
-                "unique_hash": hashlib.md5((str(credentials.host) + str(credentials.username)).encode()).hexdigest(),
-                "connection_name": connection.name,
+                "event_type": "dbt_impala_close",
                 "connection_state": ConnectionState.CLOSED,
                 "elapsed_time": "{:.2f}".format(connection_close_end_time - connection_close_start_time),
             }
@@ -248,11 +245,31 @@ class ImpalaConnectionManager(SQLConnectionManager):
             self.begin()
         fire_event(ConnectionUsed(conn_type=self.TYPE, conn_name=connection.name))
 
+        additional_info = {}
+        if self.query_header:
+            try:
+                additional_info = json.loads(self.query_header.comment.query_comment.strip())
+            except Exception as ex:  # silently ignore error for parsing
+                additional_info = {}
+                logger.debug(f"Unable to get query header {ex}")
+
         with self.exception_handler(sql):
             if abridge_sql_log:
                 log_sql = "{}...".format(sql[:512])
             else:
                 log_sql = sql
+
+            # track usage
+            payload = {
+                "event_type": "dbt_impala_start_query",
+                "sql": log_sql,
+                "profile_name": self.profile.profile_name
+            }
+
+            for key, value in additional_info.items():
+                payload[key] = value
+
+            tracker.track_usage(payload)
 
             fire_event(SQLQuery(conn_name=connection.name, sql=log_sql))
             pre = time.time()
@@ -265,10 +282,24 @@ class ImpalaConnectionManager(SQLConnectionManager):
             configuration = {"paramstyle": "format"}
             cursor.execute(sql, bindings, configuration)
 
+            elapsed_time = time.time() - pre
+
+            query_status = str(self.get_response(cursor))
+
+            payload = {
+                "event_type": "dbt_impala_end_query",
+                "sql": log_sql,
+                "elapsed_time": "{:.2f}".format(elapsed_time),
+                "status": query_status,
+                "profile_name": self.profile.profile_name
+            }
+
+            tracker.track_usage(payload)
+
             fire_event(
                 SQLQueryStatus(
-                    status=str(self.get_response(cursor)),
-                    elapsed=round((time.time() - pre), 2),
+                    status=query_status,
+                    elapsed=round(elapsed_time, 2),
                 )
             )
 
