@@ -8,6 +8,7 @@ pytest_plugins = ["dbt.tests.fixtures.project"]
 impala_ldap = {
         'type': 'impala',
         'threads': 5,
+        'dbname': 'dbttest',
         'schema': 'dbttest',
         'host': 'coordinator-dbt-impala.dw-ciadev.cna2-sx9y.cloudera.site',
         'http_path': 'cliservice',
@@ -15,8 +16,8 @@ impala_ldap = {
         'auth_type': 'ldap',
         'use_http_transport': True,
         'use_ssl': True,
-        'user': os.getenv('IMPALA_USER'),
-        'password': os.getenv('IMPALA_PASSWORD'),
+        'username': 'ganesh.venkateshwara',
+        'password': 'Password123!'
     }
 
 # The profile dictionary, used to write out profiles.yml
