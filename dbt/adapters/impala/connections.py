@@ -290,11 +290,15 @@ class ImpalaConnectionManager(SQLConnectionManager):
             # running substitution query from impyla. this fix also depends on a patch for impyla:
             # https://github.com/cloudera/impyla/pull/486
             configuration = {"paramstyle": "format"}
-            cursor.execute(sql, bindings, configuration)
+            query_exception = None
+            try:
+                cursor.execute(sql, bindings, configuration)
+                query_status = str(self.get_response(cursor))
+            except Exception as ex:
+                query_status = str(ex)
+                query_exception = ex
 
             elapsed_time = time.time() - pre
-
-            query_status = str(self.get_response(cursor))
 
             payload = {
                 "event_type": "dbt_impala_end_query",
@@ -305,6 +309,10 @@ class ImpalaConnectionManager(SQLConnectionManager):
             }
 
             tracker.track_usage(payload)
+
+            # re-raise query exception so that it propogates to dbt
+            if (query_exception):
+                raise query_exception
 
             fire_event(
                 SQLQueryStatus(
