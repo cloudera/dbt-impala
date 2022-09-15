@@ -109,7 +109,7 @@ def track_usage(tracking_payload):
 
     global usage_tracking
 
-    logger.debug(f"Usage tracking flag {usage_tracking}")
+    logger.debug(f"Usage tracking flag {usage_tracking}. To turn on/off use usage_tracking flag in profiles.yml")
 
     # if usage_tracking is disabled, quit
     if not usage_tracking:
