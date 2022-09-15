@@ -16,8 +16,8 @@ impala_ldap = {
         'auth_type': 'ldap',
         'use_http_transport': True,
         'use_ssl': True,
-        'username': 'ganesh.venkateshwara',
-        'password': 'Password123!'
+        'username': os.getenv('IMPALA_USER'),
+        'password': os.getenv('IMPALA_PASSWORD')
     }
 
 # The profile dictionary, used to write out profiles.yml
