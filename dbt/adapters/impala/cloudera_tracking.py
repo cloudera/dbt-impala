@@ -113,6 +113,7 @@ def track_usage(tracking_payload):
 
     # if usage_tracking is disabled, quit
     if not usage_tracking:
+        logger.debug(f"Skipping Event {tracking_payload}")
         return
 
     # inject other static payload to tracking_payload

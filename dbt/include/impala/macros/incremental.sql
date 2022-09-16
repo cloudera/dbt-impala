@@ -62,6 +62,8 @@
   {% set tmp_relation = make_temp_relation(target_relation, '__' + time_stamp + '__dbt_tmp') %}
   {%- set full_refresh_mode = (should_full_refresh()) -%}
 
+  {% do target_relation.log_relation(raw_strategy) %}
+
   {% set tmp_identifier = model['name'] + '__' + time_stamp + '__dbt_tmp' %}
   {% set backup_identifier = model['name'] + '__' + time_stamp + "__dbt_backup" %}
 
