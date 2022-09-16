@@ -41,7 +41,6 @@ LIST_RELATIONS_MACRO_NAME = 'list_relations_without_caching'
 KEY_TABLE_OWNER = 'Owner'
 KEY_TABLE_STATISTICS = 'Statistics'
 
-
 class ImpalaAdapter(SQLAdapter):
     Relation = ImpalaRelation
     Column = ImpalaColumn
@@ -76,13 +75,13 @@ class ImpalaAdapter(SQLAdapter):
         return "string"
 
     def quote(self, identifier):
-        return identifier  # no quote
+        return identifier # no quote
 
     @classmethod
     def convert_number_type(cls, agate_table: agate.Table, col_idx: int) -> str:
         decimals = agate_table.aggregate(agate.MaxPrecision(col_idx))  # type: ignore[attr-defined]
         return "real" if decimals else "integer"
-
+        
     def check_schema_exists(self, database, schema):
         results = self.execute_macro(
             LIST_SCHEMAS_MACRO_NAME,
@@ -90,7 +89,7 @@ class ImpalaAdapter(SQLAdapter):
         )
 
         exists = True if schema in [row[0] for row in results] else False
-
+        
         return exists
 
     def list_schemas(self, database: str) -> List[str]:
@@ -98,7 +97,7 @@ class ImpalaAdapter(SQLAdapter):
             LIST_SCHEMAS_MACRO_NAME,
             kwargs={'database': database}
         )
-
+        
         schemas = []
 
         for row in results:
@@ -108,7 +107,7 @@ class ImpalaAdapter(SQLAdapter):
         return schemas
 
     def list_relations_without_caching(
-            self, schema_relation: ImpalaRelation
+        self, schema_relation: ImpalaRelation
     ) -> List[ImpalaRelation]:
         kwargs = {'schema_relation': schema_relation}
 
@@ -134,10 +133,10 @@ class ImpalaAdapter(SQLAdapter):
                     f'got {len(row)} values, expected 4'
                 )
             _identifier = row[0]
-            _rel_type = row[1]
+            _rel_type   = row[1]
 
             relation = self.Relation.create(
-                database=None,
+                database=None, 
                 schema=schema_relation.schema,
                 identifier=_identifier,
                 type=_rel_type,
@@ -159,7 +158,7 @@ class ImpalaAdapter(SQLAdapter):
             columns = self.parse_columns_from_information(cached_relation)
 
         # execute the macro and parse the data
-        if not columns:
+        if not columns:       
             try:
                 rows: List[agate.Row] = super().get_columns_in_relation(relation)
                 columns = self.parse_describe_extended(relation, rows)
@@ -258,7 +257,7 @@ class ImpalaAdapter(SQLAdapter):
         return columns
 
     def _merged_column_types(
-            tables: List[agate.Table]
+        tables: List[agate.Table]
     ) -> Dict[str, agate.data_types.DataType]:
         # this is a lot like agate.Table.merge, but with handling for all-null
         # rows being "any type".
@@ -270,7 +269,7 @@ class ImpalaAdapter(SQLAdapter):
                 # avoid over-sensitive type inference
                 if all(x is None for x in table.columns[column_name]):
                     column_type = _NullMarker()
-
+                
                 new_columns[column_name] = column_type
 
         return new_columns.finalize()
@@ -283,8 +282,8 @@ class ImpalaAdapter(SQLAdapter):
         rows: List[agate.Row] = []
         for table in tables:
             if (
-                    table.column_names == column_names and
-                    table.column_types == column_types
+                table.column_names == column_names and
+                table.column_types == column_types
             ):
                 rows.extend(table.rows)
             else:
@@ -295,7 +294,7 @@ class ImpalaAdapter(SQLAdapter):
         return agate.Table(rows, column_names, column_types, _is_fork=True)
 
     def _catch_as_completed(
-            futures  # typing: List[Future[agate.Table]]
+        futures  # typing: List[Future[agate.Table]]
     ) -> Tuple[agate.Table, List[Exception]]:
 
         # catalogs: agate.Table = agate.Table(rows=[])
@@ -309,8 +308,8 @@ class ImpalaAdapter(SQLAdapter):
                 catalog = future.result()
                 tables.append(catalog)
             elif (
-                    isinstance(exc, KeyboardInterrupt) or
-                    not isinstance(exc, Exception)
+                isinstance(exc, KeyboardInterrupt) or
+                not isinstance(exc, Exception)
             ):
                 raise exc
             else:
@@ -325,15 +324,16 @@ class ImpalaAdapter(SQLAdapter):
     def get_catalog(self, manifest):
         schema_map = self._get_catalog_schemas(manifest)
 
+
         with executor(self.config) as tpe:
             futures: List[Future[agate.Table]] = []
             for info, schemas in schema_map.items():
                 for schema in schemas:
                     futures.append(tpe.submit_connected(
-                        self, schema,
-                        self._get_one_catalog, info, [schema], manifest
-                    ))
-            catalogs, exceptions = catch_as_completed(futures)  # call the default implementation
+                            self, schema,
+                            self._get_one_catalog, info, [schema], manifest
+                        ))
+            catalogs, exceptions = catch_as_completed(futures) # call the default implementation 
 
         return catalogs, exceptions
 
@@ -345,8 +345,7 @@ class ImpalaAdapter(SQLAdapter):
             'double': agate.data_types.Number(null_values=('null', '')),
             'timestamp': agate.data_types.DateTime(null_values=('null', ''), datetime_format='%Y-%m-%d %H:%M:%S'),
             'date': agate.data_types.Date(null_values=('null', ''), date_format='%Y-%m-%d'),
-            'boolean': agate.data_types.Boolean(true_values=('true',), false_values=('false',),
-                                                null_values=('null', '')),
+            'boolean': agate.data_types.Boolean(true_values=('true',), false_values=('false',), null_values=('null', '')),
             'text': defaultType,
             'string': defaultType
         }
@@ -354,7 +353,7 @@ class ImpalaAdapter(SQLAdapter):
         try:
             dt = datatypeMap[col_type]
 
-            if (dt == None):
+            if (dt == None): 
                 return defaultType
             else:
                 return dt
@@ -362,7 +361,7 @@ class ImpalaAdapter(SQLAdapter):
             return defaultType
 
     def _get_one_catalog(
-            self, information_schema, schemas, manifest
+        self, information_schema, schemas, manifest
     ) -> agate.Table:
 
         if len(schemas) != 1:
@@ -372,7 +371,7 @@ class ImpalaAdapter(SQLAdapter):
             )
 
         schema = list(schemas)[0]
-
+        
         columns: List[Dict[str, Any]] = []
 
         relation_list = self.list_relations(None, schema)
@@ -387,31 +386,29 @@ class ImpalaAdapter(SQLAdapter):
 
         return agate.Table.from_object(
             columns,
-            column_types=text_types
+            column_types = text_types
         )
 
     def _get_columns_for_catalog(
-            self, relation: ImpalaRelation
+        self, relation: ImpalaRelation
     ) -> Iterable[Dict[str, Any]]:
         columns = self.get_columns_in_relation(relation)
 
         for column in columns:
             # convert ImpalaColumns into catalog dicts
             as_dict = column.to_column_dict()
-
+            
             as_dict['column_name'] = relation.table + '.' + as_dict.pop('column', None)
             as_dict['column_type'] = as_dict.pop('dtype')
             as_dict['table_database'] = None
 
             yield as_dict
-
+ 
     def timestamp_add_sql(self, add_to: str, number: int = 1, interval: str = "hour") -> str:
         # We override this from base dbt adapter because impala doesn't need to escape interval 
         # duration string like postgres/redshift.
         return f"{add_to} + interval {number} {interval}"
 
-    # We only fetch permissions for a user during dbt debug to avoid overhead of fetching permissions for
-    # each single query event for a dbt run.
     def debug_query(self) -> None:
         self.execute("select 1 as id")
         try:
@@ -435,8 +432,6 @@ class ImpalaAdapter(SQLAdapter):
             }
             tracker.track_usage(payload)
         except Exception as ex:
-            # log error and keep the main flow of dbt continuing.
-            # We don't want instrumentation to affect dbt run
             logger.debug(
                 "Failed to fetch permissions for user: {}. Exception: {}".format(
                     username, ex
