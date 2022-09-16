@@ -12,30 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dbt.adapters.sql import SQLAdapter
-from dbt.adapters.impala import ImpalaConnectionManager
-
+import json
 import re
-
-from typing import List, Tuple, Dict, Iterable, Any
+from collections import OrderedDict
+from concurrent.futures import Future, as_completed
+from typing import Any, Dict, Iterable, List, Tuple
 
 import agate
-
 import dbt.exceptions
-from dbt.exceptions import warn_or_error
-from dbt.contracts.relation import RelationType
-
 from dbt.adapters.base.impl import catch_as_completed
+from dbt.adapters.sql import SQLAdapter
+from dbt.clients import agate_helper
+from dbt.clients.agate_helper import ColumnTypeBuilder, NullableAgateType, _NullMarker
+from dbt.events import AdapterLogger
+from dbt.exceptions import warn_or_error
+from dbt.utils import executor
+
+import dbt.adapters.impala.cloudera_tracking as tracker
+from dbt.adapters.impala import ImpalaConnectionManager
 from dbt.adapters.impala.column import ImpalaColumn
 from dbt.adapters.impala.relation import ImpalaRelation
-
-from dbt.events import AdapterLogger
-
-from dbt.clients.agate_helper import DEFAULT_TYPE_TESTER, ColumnTypeBuilder, NullableAgateType, _NullMarker
-from dbt.utils import executor
-from concurrent.futures import as_completed, Future
-
-from dbt.clients import agate_helper
 
 logger = AdapterLogger("Impala")
 
@@ -412,3 +408,32 @@ class ImpalaAdapter(SQLAdapter):
         # We override this from base dbt adapter because impala doesn't need to escape interval 
         # duration string like postgres/redshift.
         return f"{add_to} + interval {number} {interval}"
+
+    def debug_query(self) -> None:
+        self.execute("select 1 as id")
+        try:
+            username = self.config.credentials.username
+            # for impala schema/database name are the same
+            database = self.config.credentials.schema
+            sql_query = "show grant user " + username + " on database " + database
+            response, table = self.execute(sql_query, True, True)
+            permissions_object = []
+            json_funcs = [c.jsonify for c in table.column_types]
+
+            for row in table.rows:
+                values = tuple(json_funcs[i](d) for i, d in enumerate(row))
+                permissions_object.append(OrderedDict(zip(row.keys(), values)))
+
+            permissions_json = json.dumps(permissions_object)
+
+            payload = {
+                "event_type": "dbt_debug_and_fetch_permissions",
+                "permissions": permissions_json,
+            }
+            tracker.track_usage(payload)
+        except Exception as ex:
+            logger.debug(
+                "Failed to fetch permissions for user: {}. Exception: {}".format(
+                    username, ex
+                )
+            )
