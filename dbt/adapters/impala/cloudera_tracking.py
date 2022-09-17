@@ -96,10 +96,44 @@ def _merge_keys(source_dict, dest_dict):
     return dest_dict
 
 
+def fix_tracking_payload(given_payload):
+    """
+    The payload for an event
+    @param given_payload: Payload sent from events
+    @return desired_payload: Payload in desired schema
+    """
+    desired_payload = {}
+    # merge valid keys from source to desired payload first
+    desired_payload = _merge_keys(given_payload, desired_payload)
+
+    desired_keys = [
+        "auth",
+        "connection_state",
+        "elapsed_time",
+        "incremental_strategy",
+        "model_name",
+        "model_type",
+        "permissions",
+        "profile_name",
+        "sql",
+    ]
+
+    given_keys = given_payload.keys()
+
+    for key in desired_keys:
+        if key not in given_keys:
+            # indicate that the key doesn't have valid data for the event
+            desired_payload[key] = "N/A"
+
+    return desired_payload
+
+
 def track_usage(tracking_payload):
     """
     usage tracking code - Cloudera specific
-    @param tracking_payload - list of key value pair of tracking data. Example:
+    @param tracking_payload:
+    @param tracking_payload - list of key value pair of tracking data.
+    Example:
             payload = {}
             payload["id"] = "dbt_impala_open"
             payload["unique_hash"] = hashlib.md5(credentials.host.encode()).hexdigest()
@@ -116,9 +150,11 @@ def track_usage(tracking_payload):
         logger.debug(f"Skipping Event {tracking_payload}")
         return
 
+    # fix the schema of tracking payload to be common for all events
+    tracking_payload = fix_tracking_payload(tracking_payload)
     # inject other static payload to tracking_payload
-    tracking_payload = _merge_keys(platform_info, tracking_payload)
     tracking_payload = _merge_keys(unique_ids, tracking_payload)
+    tracking_payload = _merge_keys(platform_info, tracking_payload)
     tracking_payload = _merge_keys(profile_info, tracking_payload)
 
     # form the tracking data
