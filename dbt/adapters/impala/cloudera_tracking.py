@@ -95,6 +95,20 @@ def _merge_keys(source_dict, dest_dict):
         dest_dict[key] = value
     return dest_dict
 
+def _get_sql_type(sql):
+    if not sql:
+        return ""
+
+    words = sql.split("*/")
+
+    if len(words) > 1:
+        sql_words = words[1].strip().split()
+    else:
+        sql_words = words[0].strip().split()
+
+    sql_type = " ".join(sql_words[:min(2, len(sql_words))]).lower()
+
+    return sql_type
 
 def fix_tracking_payload(given_payload):
     """
@@ -106,6 +120,11 @@ def fix_tracking_payload(given_payload):
     # merge valid keys from source to desired payload first
     desired_payload = _merge_keys(given_payload, desired_payload)
 
+    # handle sql redaction - convert to sql type from full sql statement
+    if "sql" in desired_payload:
+        desired_payload["sql_type"] = _get_sql_type(desired_payload["sql"])
+        del desired_payload["sql"]
+   
     desired_keys = [
         "auth",
         "connection_state",
@@ -115,13 +134,11 @@ def fix_tracking_payload(given_payload):
         "model_type",
         "permissions",
         "profile_name",
-        "sql",
+        "sql_type"
     ]
 
-    given_keys = given_payload.keys()
-
     for key in desired_keys:
-        if key not in given_keys:
+        if key not in desired_payload:
             # indicate that the key doesn't have valid data for the event
             desired_payload[key] = "N/A"
 

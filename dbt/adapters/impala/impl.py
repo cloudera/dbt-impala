@@ -415,7 +415,7 @@ class ImpalaAdapter(SQLAdapter):
             username = self.config.credentials.username
             # for impala schema/database name are the same
             database = self.config.credentials.schema
-            sql_query = "show grant user " + username + " on database " + database
+            sql_query = "show grant user `" + username + "` on database " + database
             response, table = self.execute(sql_query, True, True)
             permissions_object = []
             json_funcs = [c.jsonify for c in table.column_types]
