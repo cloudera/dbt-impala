@@ -118,8 +118,10 @@ def fix_tracking_payload(given_payload):
         "sql",
     ]
 
+    given_keys = given_payload.keys()
+
     for key in desired_keys:
-        if key not in given_payload.keys():
+        if key not in given_keys:
             # indicate that the key doesn't have valid data for the event
             desired_payload[key] = "N/A"
 
