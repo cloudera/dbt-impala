@@ -32,6 +32,9 @@ from dbt.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 from dbt.logger import GLOBAL_LOGGER as LOGGER
 
 import impala.dbapi
+from impala.error import DatabaseError
+from impala.error import HttpError
+from impala.error import HiveServer2Error
 
 import dbt.adapters.impala.__version__ as ver
 import dbt.adapters.impala.cloudera_tracking as tracker
@@ -113,9 +116,15 @@ class ImpalaConnectionManager(SQLConnectionManager):
     def exception_handler(self, sql: str):
         try:
             yield
-        except impala.dbapi.DatabaseError as exc:
-            LOGGER.debug("dbt-impala error: {}".format(str(exc)))
-            raise dbt.exceptions.DatabaseException(str(exc))
+        except HttpError as httpError:
+            LOGGER.debug("Authorization error: {}".format(httpError))
+            raise dbt.exceptions.RuntimeException ("HTTP Authorization error: " + str(httpError) + ", please check your credentials")
+        except HiveServer2Error as servError:
+            LOGGER.debug("Server connection error: {}".format(servError))
+            raise dbt.exceptions.RuntimeException ("Unable to establish connection to Impala server: " + str(servError))
+        except DatabaseError as dbError:
+            LOGGER.debug("Database connection error: {}".format(str(dbError)))
+            raise dbt.exceptions.DatabaseException("Database Connection error: " + str(dbError))
         except Exception as exc:
             LOGGER.debug("Error running SQL: {}".format(sql))
             raise dbt.exceptions.RuntimeException(str(exc))
