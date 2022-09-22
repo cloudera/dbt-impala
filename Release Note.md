@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.1.3 (Sep 17th, 2022)
+Adding support for append mode when partition_by clause is used. Along with an updated instrumentation package.
 
 ## 1.1.2 (Aug 5th, 2022)  
 Now dbname in profile.yml file is optional; Updated a dependency in README; dbt-core version updates automatically in setup.py
