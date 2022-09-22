@@ -119,9 +119,9 @@ class ImpalaConnectionManager(SQLConnectionManager):
         except HttpError as httpError:
             LOGGER.debug("Authorization error: {}".format(httpError))
             raise dbt.exceptions.RuntimeException ("HTTP Authorization error: " + str(httpError) + ", please check your credentials")
-        except HiveServer2Error as hiveError:
-            LOGGER.debug("Server connection error: {}".format(hiveError))
-            raise dbt.exceptions.RuntimeException ("Unable to establish connection to Hive server: " + str(hiveError))
+        except HiveServer2Error as servError:
+            LOGGER.debug("Server connection error: {}".format(servError))
+            raise dbt.exceptions.RuntimeException ("Unable to establish connection to Impala server: " + str(servError))
         except DatabaseError as dbError:
             LOGGER.debug("Database connection error: {}".format(str(dbError)))
             raise dbt.exceptions.DatabaseException("Database Connection error: " + str(dbError))
