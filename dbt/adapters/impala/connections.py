@@ -86,6 +86,8 @@ class ImpalaCredentials(Credentials):
         tracker.usage_tracking = self.usage_tracking
         # get platform information for tracking
         tracker.populate_platform_info(self, ver)
+        # get cml information for tracking
+        tracker.populate_cml_info()
         # generate unique ids for tracking
         tracker.populate_unique_ids(self)
 
