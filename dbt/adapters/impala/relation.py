@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from dbt.adapters.base.relation import BaseRelation, Policy
 from dbt.exceptions import RuntimeException
 
+import dbt.adapters.impala.cloudera_tracking as tracker
 
 @dataclass
 class ImpalaQuotePolicy(Policy):
@@ -37,9 +38,27 @@ class ImpalaRelation(BaseRelation):
     include_policy: ImpalaIncludePolicy = ImpalaIncludePolicy()
     quote_character: str = None
     information: str = None
+
+    def __post_init__(self):
+        if (self.type):
+            tracker.track_usage({
+                "event_type": "dbt_impala_model_access",
+                "model_name": self.render(),
+                "model_type": self.type,
+                "incremental_strategy": ""
+            })
     
     def render(self):
         return super().render()
+
+    def log_relation(self, incremental_strategy):
+        if (self.type):
+            tracker.track_usage({
+                "event_type": "dbt_impala_new_incremental",
+                "model_name": self.render(),
+                "model_type": self.type,
+                "incremental_strategy": incremental_strategy
+            })
 
     def new_copy(self, name, identifier):
         new_relation = ImpalaRelation.create(

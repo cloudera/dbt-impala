@@ -26,10 +26,6 @@ from dbt.tests.adapter.basic.test_generic_tests import BaseGenericTests
 from dbt.tests.adapter.basic.test_snapshot_check_cols import BaseSnapshotCheckCols
 from dbt.tests.adapter.basic.test_snapshot_timestamp import BaseSnapshotTimestamp
 from dbt.tests.adapter.basic.test_adapter_methods import BaseAdapterMethod
-from dbt.tests.adapter.basic.test_docs_generate import BaseDocsGenerate, BaseDocsGenReferences
-
-from dbt.tests.adapter.utils.base_utils import BaseUtils
-from dbt.tests.adapter.grants.base_grants import BaseGrants
 
 from dbt.tests.adapter.basic.files import (
     schema_base_yml,
@@ -116,16 +112,3 @@ class TestSnapshotTimestampImpala(BaseSnapshotTimestamp):
 
 class TestBaseAdapterMethod(BaseAdapterMethod):
     pass
-
-class TestBaseDocsImpala(BaseDocsGenerate):
-    pass
-
-class TestBaseDocsGenRefsImpala(BaseDocsGenReferences):
-    pass
-
-class TestBaseUtilsImpala(BaseUtils):
-    pass
-
-class TestBaseGrantsImpala(BaseGrants):
-    pass 
-
