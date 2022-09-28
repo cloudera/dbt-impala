@@ -65,7 +65,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'dbt-core~={}'.format(dbt_core_version),
-        "impyla>=0.18a5",
+        "impyla==0.18a7",
         "python-decouple>=3.6"
     ],
     classifiers=[
