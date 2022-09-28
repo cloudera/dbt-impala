@@ -206,6 +206,7 @@
   {% call statement('drop_relation_if_exists_view') %}
     drop view if exists {{ relation }}
   {% endcall %}
+  {{ invalidate_metadata(relation) }}
 {% endmacro %}
 
 {% macro is_relation_present(relation) -%}
@@ -248,6 +249,12 @@
   {% do return(rel_type) %}
 {% endmacro %}
 
+{% macro invalidate_metadata(relation) %}
+    {% call statement('invalidate_metadata') %}
+        invalidate metadata {{ relation.include(schema=True) }}
+    {% endcall %}
+{% endmacro %}
+
 {% macro impala__rename_relation(from_relation, to_relation) -%}
   {% set from_rel_type = get_relation_type(from_relation) %}
   
@@ -255,8 +262,12 @@
     drop table if exists {{ to_relation }}
   {% endcall %}
   {% call statement('drop_relation_if_exists_view') %}
-    drop view if exists {{ to_relation }};
+    drop view if exists {{ to_relation }}
   {% endcall %}
+  
+  {{ invalidate_metadata(to_relation) }}
+  {{ invalidate_metadata(from_relation) }}
+
   {% call statement('rename_relation') -%}
     {% if not from_rel_type %}
       {% do exceptions.raise_database_error("Cannot rename a relation with a blank type: " ~ from_relation.identifier) %}
@@ -268,6 +279,8 @@
       {% do exceptions.raise_database_error("Unknown type '" ~ from_rel_type ~ "' for relation: " ~ from_relation.identifier) %}
     {% endif %}
   {%- endcall %}
+
+  {{ invalidate_metadata(to_relation) }}
 {% endmacro %}
 
 {% macro impala__get_columns_in_relation(relation) -%}

@@ -111,6 +111,7 @@
       {% do to_drop.append(backup_relation) %}
       {% do to_drop.append(intermediate_relation) %}
   {% else %}
+    {{ drop_relation_if_exists(tmp_relation) }}
     {% do run_query(create_table_as(True, tmp_relation, sql)) %}
     {% do adapter.expand_target_column_types(
              from_relation=tmp_relation,
@@ -125,6 +126,8 @@
     {#-- set build_sql = get_delete_insert_merge_sql(target_relation, tmp_relation, unique_key, dest_columns) --#}
 
     {% set build_sql = get_insert_overwrite_sql(target_relation, tmp_relation, dest_columns) %}
+
+    {% do to_drop.append(tmp_relation) %}
   
   {% endif %}
 
@@ -133,7 +136,9 @@
   {% endcall %}
 
   {% if need_swap %} 
+      {{ drop_relation_if_exists(backup_relation) }}
       {% do adapter.rename_relation(target_relation, backup_relation) %} 
+      {{ drop_relation_if_exists(target_relation) }}
       {% do adapter.rename_relation(intermediate_relation, target_relation) %} 
   {% endif %}
 
@@ -149,7 +154,7 @@
   {% do adapter.commit() %}
 
   {% for rel in to_drop %}
-      {% do adapter.drop_relation(rel) %}
+      {{ drop_relation_if_exists(rel) }}
   {% endfor %}
 
   {{ run_hooks(post_hooks, inside_transaction=False) }}
