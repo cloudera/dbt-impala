@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.4 (Sep 30th, 2022)
+Added user-agent string to improve instrumentation. dbt-impala also adds better error handling and display to the user.
+
 ## 1.1.3 (Sep 17th, 2022)
 Adding support for append mode when partition_by clause is used. Along with an updated instrumentation package.
 
