@@ -412,26 +412,36 @@ class ImpalaAdapter(SQLAdapter):
     def debug_query(self) -> None:
         self.execute("select 1 as id")
         username = ""
+
+        # query user permissions where available
         try:
             username = self.config.credentials.username
-            sql_query = "show grant user `" + username + "` on server"
-            _, table = self.execute(sql_query, True, True)
-            permissions_object = []
-            json_funcs = [c.jsonify for c in table.column_types]
+            if not username: # username is not available when auth_type is insecure or kerberos
+                logger.debug("No username available to fetch permissions")
+                payload = {
+                    "event_type": "dbt_impala_debug_and_fetch_permissions",
+                    "permissions": "NA",
+                }
+                tracker.track_usage(payload)
+            else:
+                sql_query = "show grant user `" + username + "` on server"
+                _, table = self.execute(sql_query, True, True)
+                permissions_object = []
+                json_funcs = [c.jsonify for c in table.column_types]
 
-            for row in table.rows:
-                values = tuple(json_funcs[i](d) for i, d in enumerate(row))
-                permissions_object.append(OrderedDict(zip(row.keys(), values)))
+                for row in table.rows:
+                    values = tuple(json_funcs[i](d) for i, d in enumerate(row))
+                    permissions_object.append(OrderedDict(zip(row.keys(), values)))
 
-            permissions_json = json.dumps(permissions_object)
+                permissions_json = json.dumps(permissions_object)
 
-            payload = {
-                "event_type": "dbt_impala_debug_and_fetch_permissions",
-                "permissions": permissions_json,
-            }
-            tracker.track_usage(payload)
+                payload = {
+                    "event_type": "dbt_impala_debug_and_fetch_permissions",
+                    "permissions": permissions_json,
+                }
+                tracker.track_usage(payload)
         except Exception as ex:
-            logger.debug(
+            logger.error(
                 f"Failed to fetch permissions for user: {username}. Exception: {ex}"
             )
             self.connections.get_thread_connection().handle.close()
