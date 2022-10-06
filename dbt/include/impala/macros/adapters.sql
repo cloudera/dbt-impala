@@ -200,6 +200,7 @@
 {% endmacro %}
 
 {% macro impala__drop_relation(relation) -%}
+  {{ invalidate_metadata(relation) }}
   {% call statement('drop_relation_if_exists_table') %}
     drop table if exists {{ relation }}
   {% endcall %}
@@ -258,6 +259,9 @@
 {% macro impala__rename_relation(from_relation, to_relation) -%}
   {% set from_rel_type = get_relation_type(from_relation) %}
   
+  {{ invalidate_metadata(to_relation) }}
+  {{ invalidate_metadata(from_relation) }}
+
   {% call statement('drop_relation_if_exists_table') %}
     drop table if exists {{ to_relation }}
   {% endcall %}
