@@ -1,3 +1,3 @@
 {% macro impala__bool_or(expression) -%}
-    max({{ expression }})
+    bit_or({{ expression }})
 {%- endmacro %}
