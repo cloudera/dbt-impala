@@ -383,7 +383,7 @@ select
     cast({{date_trunc('day', 'updated_at') }} as date) as actual,
     day as expected
 
-from data
+from util_data
 
 union all
 
@@ -506,7 +506,7 @@ class TestLength(BaseLength):
         }
 
 models__test_listagg_sql = """
-with data as (
+with util_data as (
 
     select * from {{ ref('data_listagg') }}
 
