@@ -95,7 +95,8 @@
 
             {% if datepart == 'microsecond' %}
                 {% set capture_str = '[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2}.([0-9]{6})' %}
-                -- Impala doesn't really support microseconds, so this is a massive hack!
+                -- Impala doesn't really support microseconds extration from timestamp, eventhough there is microsecond_add/sub
+                -- So this is a massive hack!
                 -- It will only work if the timestamp-string is of the format
                 -- 'yyyy-MM-dd-HH mm.ss.SSSSSS'
                 + cast(regexp_extract(cast(cast({{second_date}} as timestamp) as string), '{{capture_str}}', 1) as bigint)
