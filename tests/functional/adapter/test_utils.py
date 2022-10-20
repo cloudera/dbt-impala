@@ -8,7 +8,6 @@ from dbt.tests.adapter.utils.test_dateadd import BaseDateAdd
 from dbt.tests.adapter.utils.test_datediff import BaseDateDiff
 from dbt.tests.adapter.utils.test_date_trunc import BaseDateTrunc
 from dbt.tests.adapter.utils.test_escape_single_quotes import BaseEscapeSingleQuotesQuote
-from dbt.tests.adapter.utils.test_escape_single_quotes import BaseEscapeSingleQuotesBackslash
 from dbt.tests.adapter.utils.test_except import BaseExcept
 from dbt.tests.adapter.utils.test_hash import BaseHash
 from dbt.tests.adapter.utils.test_intersect import BaseIntersect
@@ -118,6 +117,11 @@ from dbt.tests.adapter.utils.fixture_split_part import (
     seeds__data_split_part_csv,
     models__test_split_part_sql,
     models__test_split_part_yml,
+)
+
+from dbt.tests.adapter.utils.fixture_escape_single_quotes import (
+    models__test_escape_single_quotes_quote_sql,
+    models__test_escape_single_quotes_yml,
 )
 
 models__test_any_value_sql = """
@@ -408,8 +412,20 @@ class TestDateTrunc(BaseDateTrunc):
         }
 
 
+models__test_escape_single_quotes_quote_sql = """
+select '{{ escape_single_quotes("they're") }}' as actual, 'they\\'re' as expected union all
+select '{{ escape_single_quotes("they are") }}' as actual, 'they are' as expected
+"""
+
 class TestEscapeSingleQuotes(BaseEscapeSingleQuotesQuote):
-    pass
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "test_escape_single_quotes.yml": models__test_escape_single_quotes_yml,
+            "test_escape_single_quotes.sql": self.interpolate_macro_namespace(
+                models__test_escape_single_quotes_quote_sql, "escape_single_quotes"
+            ),
+        }
 
 
 class TestExcept(BaseExcept):
