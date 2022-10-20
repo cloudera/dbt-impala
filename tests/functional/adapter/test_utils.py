@@ -220,11 +220,13 @@ class TestBoolOr(BaseBoolOr):
             ),
         }
 
+# in impala cast of boolean to string return 1 or 0
+# (c.f. https://impala.apache.org/docs/build/html/topics/impala_boolean.html#boolean)
 models__test_cast_bool_to_text_sql = """
 with util_data as (
 
-    select 0=1 as input, 'false' as expected union all
-    select 1=1 as input, 'true' as expected union all
+    select 0=1 as input, '0' as expected union all
+    select 1=1 as input, '1' as expected union all
     select null as input, null as expected
 
 )
