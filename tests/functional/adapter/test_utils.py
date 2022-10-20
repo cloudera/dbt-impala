@@ -429,6 +429,12 @@ select
 
 from util_data
 """
+seeds__data_hash_csv = """input_1,output
+ab,3FBCEECA48A5E50A
+a,1C9DA4DB639FDDAC
+1,1C9DF4DB63A0659C
+,811C9DC5
+"""
 class TestHash(BaseHash):
     @pytest.fixture(scope="class")
     def seeds(self):
