@@ -10,6 +10,8 @@
 {% macro impala__datediff(first_date, second_date, datepart) %}
 
     {# make sure the dates are real, otherwise raise an error asap #}
+    {% set org_first_date = first_date %}
+    {% set org_second_date = second_date %}
     {% set first_date = assert_not_null2('date_part', '"EPOCH"', first_date) %}
     {% set second_date = assert_not_null2('date_part', '"EPOCH"', second_date) %}
 
@@ -87,17 +89,17 @@
             end
 
             {% if datepart == 'millisecond' %}
-                + cast(date_part("MILLISECOND", cast({{second_date}} as timestamp)) as int)
-                - cast(date_part("MILLISECOND", cast({{first_date}} as timestamp)) as int)
+                + millisecond({{org_second_date}})
+                - millisecond({{org_first_date}})
             {% endif %}
 
             {% if datepart == 'microsecond' %}
                 {% set capture_str = '[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2}.([0-9]{6})' %}
-                -- Spark doesn't really support microseconds, so this is a massive hack!
+                -- Impala doesn't really support microseconds, so this is a massive hack!
                 -- It will only work if the timestamp-string is of the format
                 -- 'yyyy-MM-dd-HH mm.ss.SSSSSS'
-                + cast(regexp_extract(cast(cast({{second_date}} as timestamp) as string), '{{capture_str}}', 1) as int)
-                - cast(regexp_extract(cast(cast({{first_date}} as timestamp) as string), '{{capture_str}}', 1) as int)
+                + cast(regexp_extract(cast(cast({{second_date}} as timestamp) as string), '{{capture_str}}', 1) as bigint)
+                - cast(regexp_extract(cast(cast({{first_date}} as timestamp) as string), '{{capture_str}}', 1) as bigint)
             {% endif %}
 
     {%- else -%}
