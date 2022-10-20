@@ -190,9 +190,7 @@
 {% endmacro %}
 
 {% macro impala__drop_schema(relation) -%}
-  {%- call statement('drop_schema') -%}
-    drop schema if exists {{ relation }} cascade
-  {%- endcall -%}
+  {# no-op #}
 {% endmacro %}
 
 {% macro impala__drop_relation(relation) -%}
