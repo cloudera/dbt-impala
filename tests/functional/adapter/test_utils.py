@@ -189,9 +189,9 @@ calculate as (
 
     select
         key,
-        {{ bool_or('val1 = val2, 0') }} as value
+        {{ bool_or('val1 = val2') }} as value
     from util_data
-    group by key, value
+    group by key
 
 )
 
