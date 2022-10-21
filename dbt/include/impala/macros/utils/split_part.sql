@@ -22,7 +22,7 @@
         {{ string_text }},
         {{ delimiter_text }},
         {{ part_number }}
-        )
+    )
 
     {% endset %}
 

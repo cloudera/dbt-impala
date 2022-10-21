@@ -14,7 +14,7 @@
 # limitations under the License.
 #}
 
-{%- macro default_last_day(date, datepart) -%}
+{%- macro impala_last_day(date, datepart) -%}
     {% if datepart == 'quarter' %}
         cast(
             {{
