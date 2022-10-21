@@ -7,12 +7,11 @@ pytest_plugins = ["dbt.tests.fixtures.project"]
 
 impala_ldap = {
         'type': 'impala',
-        'threads': 5,
-        'dbname': 'dbttest',
-        'schema': 'dbttest',
-        'host': 'coordinator-dbt-impala.dw-ciadev.cna2-sx9y.cloudera.site',
-        'http_path': 'cliservice',
-        'port': 443,
+        'threads': 4,
+        'schema': 'dbt_adapter_test',
+        'host':  os.getenv('IMPALA_HOST'),
+        'http_path': os.getenv('IMPALA_HTTP_PATH'),
+        'port': int(os.getenv('IMPALA_PORT')),
         'auth_type': 'ldap',
         'use_http_transport': True,
         'use_ssl': True,
