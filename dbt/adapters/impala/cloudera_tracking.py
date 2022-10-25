@@ -198,7 +198,7 @@ def track_usage(tracking_payload):
     tracking_payload = _merge_keys(profile_info, tracking_payload)
 
     # form the tracking data
-    tracking_data = {"data": tracking_payload}
+    tracking_data = {"data": json.dumps(tracking_payload)}
 
     # inner function which actually calls the endpoint
     def _tracking_func(data):
