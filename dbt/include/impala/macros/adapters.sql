@@ -111,10 +111,6 @@
   {%- endif %}
 {%- endmacro -%}
 
-{% macro impala__current_timestamp() -%}
-  current_timestamp()
-{%- endmacro %}
-
 /* to_timestamp function in impala takes 2 arguements, second being format and mandatory */
 {% macro impala__snapshot_string_as_time(timestamp) -%}
     {%- set result = "to_timestamp('" ~ timestamp ~ "', 'yyyy-MM-dd HH:mm:ss.SSSSSS')" -%}
