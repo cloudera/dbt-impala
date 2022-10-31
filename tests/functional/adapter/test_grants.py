@@ -25,6 +25,13 @@ class TestModelGrantsImpala(BaseModelGrants):
             "insert": "insert",
         }
 
+    def assert_expected_grants_match_actual(self, project, relation_name, expected_grants):
+        actual_grants = self.get_grants_on_relation(project, relation_name)
+
+        for grant_key in actual_grants:
+            if grant_key not in expected_grants:
+                return False
+        return True
 
 class TestIncrementalGrantsImpala(BaseIncrementalGrants):
     @pytest.fixture(scope="class")
