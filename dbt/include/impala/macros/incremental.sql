@@ -55,6 +55,9 @@
   
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
 
+   -- grab current tables grants config for comparision later on
+  {% set grant_config = config.get('grants') %}
+
   {%- set time_stamp = modules.datetime.datetime.now().isoformat().replace("-","").replace(":","").replace(".","") -%}
 
   {% set target_relation = this.incorporate(type='table') %}
@@ -153,6 +156,9 @@
   {% endfor %}
 
   {{ run_hooks(post_hooks, inside_transaction=False) }}
+
+  {% set should_revoke = should_revoke(existing_relation, full_refresh_mode) %}
+  {% do apply_grants(target_relation, grant_config, should_revoke) %}
 
   {{ return({'relations': [target_relation]}) }}
 
