@@ -33,25 +33,3 @@ class TestModelGrantsImpala(BaseModelGrants):
                 return False
         return True
 
-class TestIncrementalGrantsImpala(BaseIncrementalGrants):
-    @pytest.fixture(scope="class")
-    def project_config_update(self):
-        return {
-            "models": {
-                "+incremental_strategy": "append",
-            }
-        }
-
-
-class TestSeedGrantsImpala(BaseSeedGrants):
-    def seeds_support_partial_refresh(self):
-        return False
-
-
-class TestInvalidGrantsImpala(BaseInvalidGrants):
-    def grantee_does_not_exist_error(self):
-        return "RESOURCE_DOES_NOT_EXIST"
-        
-    def privilege_does_not_exist_error(self):
-        return "Action Unknown"
-
