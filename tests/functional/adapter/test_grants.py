@@ -225,12 +225,6 @@ class TestSeedGrantsImpala(BaseSeedGrants):
         self.assert_expected_grants_match_actual(project, "my_seed", expected)
 
 class TestInvalidGrantsImpala(BaseInvalidGrants):
-    def grantee_does_not_exist_error(self):
-        return "RESOURCE_DOES_NOT_EXIST"
-        
-    def privilege_does_not_exist_error(self):
-        return "Action Unknown"
-
     def assert_expected_grants_match_actual(self, project, relation_name, expected_grants):
         actual_grants = self.get_grants_on_relation(project, relation_name)
         
