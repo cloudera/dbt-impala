@@ -108,6 +108,47 @@ class ImpalaCredentials(Credentials):
         # adapter anonymous adoption
         return self.host
 
+class ImpalaConnectionWrapper(object):
+    def __init__(self, handle):
+        self.handle = handle
+        self._cursor = self.handle.cursor()
+
+    def cursor(self):
+        if not self._cursor:
+            self._cursor = self.handle.cursor()
+        return self
+
+    def cancel(self):
+        if self._cursor:
+            try:
+                self._cursor.cancel()
+            except EnvironmentError as exc:
+                logger.debug("Exception while cancelling query: {}".format(exc))
+
+    def close(self):
+        if self._cursor:
+            try:
+                self._cursor.close()
+                self._cursor = None
+            except EnvironmentError as exc:
+                logger.debug("Exception while closing cursor: {}".format(exc))
+
+    def rollback(self, *args, **kwargs):
+        logger.debug("NotImplemented: rollback")
+
+    def fetchall(self):
+        return self._cursor.fetchall()
+
+    def fetchone(self):
+        return self._cursor.fetchone()
+
+    def execute(self, sql, bindings=None, configuration={}):
+        result = self._cursor.execute(sql, bindings, configuration)
+        return result
+
+    @property
+    def description(self):
+        return self._cursor.description
 
 class ImpalaConnectionManager(SQLConnectionManager):
     TYPE = "impala"
@@ -190,7 +231,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection_end_time = time.time()
 
             connection.state = ConnectionState.OPEN
-            connection.handle = handle
+            connection.handle = ImpalaConnectionWrapper(handle)
         except Exception as ex:
             logger.debug("Connection error {}".format(ex))
             connection_ex = ex

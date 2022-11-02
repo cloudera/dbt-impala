@@ -218,7 +218,6 @@ def track_usage(tracking_payload):
         res = None
 
         try:
-            logger.debug(f"Sending Event {data}")
             res = requests.post(
                 SNOWPLOW_ENDPOINT, data=data, headers=headers, timeout=SNOWPLOW_TIMEOUT
             )
@@ -228,6 +227,8 @@ def track_usage(tracking_payload):
             usage_tracking = False
 
         return res
+
+    logger.debug(f"Sending Event {tracking_data}")
 
     # call the tracking function in a Thread
     the_track_thread = threading.Thread(
