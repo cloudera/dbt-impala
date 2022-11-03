@@ -27,6 +27,8 @@ from dbt.tests.adapter.basic.test_snapshot_check_cols import BaseSnapshotCheckCo
 from dbt.tests.adapter.basic.test_snapshot_timestamp import BaseSnapshotTimestamp
 from dbt.tests.adapter.basic.test_adapter_methods import BaseAdapterMethod
 
+from dbt.tests.adapter.utils.base_utils import BaseUtils
+
 from dbt.tests.adapter.basic.files import (
     schema_base_yml,
     incremental_sql,
@@ -112,3 +114,7 @@ class TestSnapshotTimestampImpala(BaseSnapshotTimestamp):
 
 class TestBaseAdapterMethod(BaseAdapterMethod):
     pass
+
+class TestBaseUtilsImpala(BaseUtils):
+     pass
+

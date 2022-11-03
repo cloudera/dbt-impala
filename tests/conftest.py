@@ -15,7 +15,7 @@ impala_ldap = {
         'auth_type': 'ldap',
         'use_http_transport': True,
         'use_ssl': True,
-        'username': os.getenv('IMPALA_USER'),
+        'user': os.getenv('IMPALA_USER'),
         'password': os.getenv('IMPALA_PASSWORD')
     }
 
