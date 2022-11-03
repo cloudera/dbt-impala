@@ -12,7 +12,7 @@ The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along 
 
 Python >= 3.8
 
-dbt-core ~= 1.1.0
+dbt-core ~= 1.2.0
 
 impyla >= 0.18a5
 
