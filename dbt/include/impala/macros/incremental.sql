@@ -40,6 +40,10 @@
    {% endif %}
 {% endmacro %}
 
+{% macro impala__get_incremental_default_sql(arg_dict) %}
+   {% do return(get_insert_overwrite_sql(arg_dict["target_relation"], arg_dict["temp_relation"], arg_dict["dest_columns"])) %}
+{% endmacro %}
+
 {% materialization incremental, adapter='impala' -%}
 
   {% set unique_key = config.get('unique_key') %}
