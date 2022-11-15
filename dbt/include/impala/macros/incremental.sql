@@ -51,6 +51,9 @@
   {% endif %}
 
   {% set raw_strategy = config.get('incremental_strategy', default='append') %}
+  {% if raw_strategy == None %}
+    {% set raw_strategy = 'append' %}
+  {% endif %}
   {% set strategy = validate_get_incremental_strategy(raw_strategy) %}
   
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
