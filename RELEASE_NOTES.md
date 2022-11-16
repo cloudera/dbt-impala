@@ -1,7 +1,7 @@
 # Changelog
 
 ## 1.2.0 (Nov 2nd, 2022)
-Now dbt-adapter supports dbt-core 1.2.0
+Added dbt-core 1.2.0 support
 
 ## 1.1.5 (Oct 28th, 2022)
 Updated instrumentation schema
