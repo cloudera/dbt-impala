@@ -34,6 +34,7 @@ from dbt.tests.adapter.utils.test_date_trunc import BaseDateTrunc
 from dbt.tests.adapter.utils.test_last_day import BaseLastDay
 from dbt.tests.adapter.utils.test_listagg import BaseListagg
 from dbt.tests.adapter.utils.test_intersect import BaseIntersect
+from dbt.tests.adapter.utils.test_current_timestamp import BaseCurrentTimestampNaive
 
 from dbt.tests.adapter.utils.fixture_concat import (
     seeds__data_concat_csv,
@@ -799,4 +800,7 @@ class TestListagg(BaseListagg):
         }
 
 class TestIntersect(BaseIntersect):
+    pass
+
+class TestCurrentTimestamp(BaseCurrentTimestampNaive):
     pass
