@@ -71,8 +71,8 @@ def populate_dbt_deployment_env_info():
     """
     populate dbt deployment environment variables if available to be passed on for tracking
     """
-    default_value = ""  # if environment variables doesn't exist add empty string as default
-    dbt_deployment_env_info["dbt_deployment_env"] = os.environ.get('DBT_DEPLOYMENT_ENV', default_value)
+    default_value = "{}"  # if environment variables doesn't exist add empty json as default
+    dbt_deployment_env_info["dbt_deployment_env"] = json.loads(os.environ.get('DBT_DEPLOYMENT_ENV', default_value))
 
 def populate_unique_ids(cred: Credentials):
     host = str(cred.host).encode()

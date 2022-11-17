@@ -433,7 +433,7 @@ class ImpalaAdapter(SQLAdapter):
                     values = tuple(json_funcs[i](d) for i, d in enumerate(row))
                     permissions_object.append(OrderedDict(zip(row.keys(), values)))
 
-                permissions_json = json.dumps(permissions_object)
+                permissions_json = permissions_object
 
                 payload = {
                     "event_type": "dbt_impala_debug_and_fetch_permissions",
@@ -457,7 +457,7 @@ class ImpalaAdapter(SQLAdapter):
                 values = tuple(json_funcs[i](d) for i, d in enumerate(row))
                 version_object.append(OrderedDict(zip(row.keys(), values)))
 
-            version_json = json.dumps(version_object)
+            version_json = version_object
 
             payload = {
                 "event_type": "dbt_impala_warehouse",
