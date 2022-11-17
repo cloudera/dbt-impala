@@ -370,7 +370,8 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             # re-raise query exception so that it propogates to dbt
             if (query_exception):
-                raise query_exception
+                if (sql.find("invalidate metadata") < 0): # ignore errors for invalidate metadata
+                    raise query_exception
 
             fire_event(
                 SQLQueryStatus(
