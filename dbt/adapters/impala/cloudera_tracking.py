@@ -74,9 +74,9 @@ def populate_dbt_deployment_env_info():
     default_value = "{}"  # if environment variables doesn't exist add empty json as default
     dbt_deployment_env_info["dbt_deployment_env"] = json.loads(os.environ.get('DBT_DEPLOYMENT_ENV', default_value))
 
-def populate_unique_ids(cred: Credentials):
+def populate_unique_ids(cred: Credentials, userkey="username"):
     host = str(cred.host).encode()
-    user = str(cred.username).encode()
+    user = str(getattr(cred, userkey)).encode()
     timestamp = str(time.time()).encode()
 
     # dbt invocation id
