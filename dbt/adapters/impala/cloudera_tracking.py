@@ -27,6 +27,17 @@ from dbt.adapters.base import Credentials
 from dbt.events import AdapterLogger
 from decouple import config
 
+from enum import Enum
+
+# enum for all event types
+class TrackingEventType(Enum):
+    debug_and_fetch_permission = 1,
+    open = 2,
+    close = 3,
+    start_query = 4,
+    end_query = 5,
+    new_incremental = 6,
+    model_access = 7
 
 # global logger
 logger = AdapterLogger("Tracker")
@@ -45,6 +56,9 @@ profile_info = {}
 
 # Json object to store dbt deployment environment variables
 dbt_deployment_env_info = {}
+
+# Json object for warehouse information
+warehouse_info = { "warehouse_version": { "version": "NA", "build": "NA" } }
 
 def populate_platform_info(cred: Credentials, ver):
     """
@@ -92,7 +106,6 @@ def populate_unique_ids(cred: Credentials, userkey="username"):
     # hashed session
     unique_ids["unique_session_hash"] = hashlib.md5(host + user + timestamp).hexdigest()
 
-
 def generate_profile_info(self):
     if not profile_info:
         # name of dbt project in profiles
@@ -102,6 +115,9 @@ def generate_profile_info(self):
         # number of threads in profiles
         profile_info["no_of_threads"] = self.profile.threads
 
+def populate_warehouse_info(w_info):
+    warehouse_info["warehouse_version"]["version"] = w_info["version"]
+    warehouse_info["warehouse_version"]["build"] = w_info["build"]
 
 def _merge_keys(source_dict, dest_dict):
     for key, value in source_dict.items():
@@ -187,6 +203,7 @@ def track_usage(tracking_payload):
     tracking_payload = _merge_keys(platform_info, tracking_payload)
     tracking_payload = _merge_keys(dbt_deployment_env_info, tracking_payload)
     tracking_payload = _merge_keys(profile_info, tracking_payload)
+    tracking_payload = _merge_keys(warehouse_info, tracking_payload)
 
     # form the tracking data
     tracking_data = {"data": json.dumps(tracking_payload)}
