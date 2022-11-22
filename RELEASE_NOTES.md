@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.0 (Nov 18th, 2022)
+Added dbt-core 1.3.0 support
+
 ## 1.2.0 (Nov 2nd, 2022)
 Added dbt-core 1.2.0 support
 
