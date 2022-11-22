@@ -15,7 +15,6 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-import os
 import time
 import dbt.exceptions
 
@@ -246,7 +245,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
         # track usage
         payload = {
-            "event_type": tracker.TrackingEventType.open.name,
+            "event_type": tracker.TrackingEventType.OPEN,
             "auth": auth_type,
             "connection_state": connection.state,
             "elapsed_time": "{:.2f}".format(
@@ -273,7 +272,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection_close_end_time = time.time()
 
             payload = {
-                "event_type": tracker.TrackingEventType.close.name,
+                "event_type": tracker.TrackingEventType.CLOSE,
                 "connection_state": ConnectionState.CLOSED,
                 "elapsed_time": "{:.2f}".format(
                     connection_close_end_time - connection_close_start_time
@@ -309,8 +308,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             tracker.populate_warehouse_info({ "version": ImpalaConnectionManager.impala_version, "build": "NA" })
 
-        os.environ['DBT_IMPALA_VERSION'] = ImpalaConnectionManager.impala_version 
-        logger.debug(f"IMPALA VERSION {os.getenv('DBT_IMPALA_VERSION')}")
+        logger.debug(f"IMPALA VERSION {'ImpalaConnectionManager.impala_version'}")
 
     @classmethod
     def get_response(cls, cursor):
@@ -360,7 +358,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             # track usage
             payload = {
-                "event_type": tracker.TrackingEventType.start_query.name,
+                "event_type": tracker.TrackingEventType.START_QUERY,
                 "sql": log_sql,
                 "profile_name": self.profile.profile_name
             }
@@ -390,7 +388,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             elapsed_time = time.time() - pre
 
             payload = {
-                "event_type": tracker.TrackingEventType.end_query.name,
+                "event_type": tracker.TrackingEventType.END_QUERY,
                 "sql": log_sql,
                 "elapsed_time": "{:.2f}".format(elapsed_time),
                 "status": query_status,

@@ -419,7 +419,7 @@ class ImpalaAdapter(SQLAdapter):
             if not username: # username is not available when auth_type is insecure or kerberos
                 logger.debug("No username available to fetch permissions")
                 payload = {
-                    "event_type": tracker.TrackingEventType.debug_and_fetch_permission.name,
+                    "event_type": tracker.TrackingEventType.DEBUG,
                     "permissions": "NA",
                 }
                 tracker.track_usage(payload)
@@ -436,7 +436,7 @@ class ImpalaAdapter(SQLAdapter):
                 permissions_json = permissions_object
 
                 payload = {
-                    "event_type": tracker.TrackingEventType.debug_and_fetch_permission.name,
+                    "event_type": tracker.TrackingEventType.DEBUG,
                     "permissions": permissions_json,
                 }
                 tracker.track_usage(payload)

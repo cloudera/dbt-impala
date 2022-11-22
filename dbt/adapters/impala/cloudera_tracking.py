@@ -27,17 +27,15 @@ from dbt.adapters.base import Credentials
 from dbt.events import AdapterLogger
 from decouple import config
 
-from enum import Enum
-
-# enum for all event types
-class TrackingEventType(Enum):
-    debug_and_fetch_permission = 1,
-    open = 2,
-    close = 3,
-    start_query = 4,
-    end_query = 5,
-    new_incremental = 6,
-    model_access = 7
+# all event types
+class TrackingEventType:
+    DEBUG = "debug_and_fetch_permission"
+    OPEN = "open"
+    CLOSE = "close"
+    START_QUERY = "start_query"
+    END_QUERY = "end_query"
+    INCREMENTAL = "incremental"
+    MODEL_ACCESS = "model_access"
 
 # global logger
 logger = AdapterLogger("Tracker")
@@ -230,6 +228,8 @@ def track_usage(tracking_payload):
             "x-datacoral-passthrough": "true",
         }
 
+        logger.debug(f"Sending Event {data}")
+
         data = json.dumps([data])
 
         res = None
@@ -244,8 +244,6 @@ def track_usage(tracking_payload):
             usage_tracking = False
 
         return res
-
-    logger.debug(f"Sending Event {tracking_data}")
 
     # call the tracking function in a Thread
     the_track_thread = threading.Thread(
