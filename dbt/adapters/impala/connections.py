@@ -153,6 +153,8 @@ class ImpalaConnectionWrapper(object):
 class ImpalaConnectionManager(SQLConnectionManager):
     TYPE = "impala"
 
+    impala_version = None
+
     def __init__(self, profile: AdapterRequiredConfig):
         super().__init__(profile)
         # generate profile related object for instrumentation.
@@ -232,6 +234,8 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             connection.state = ConnectionState.OPEN
             connection.handle = ImpalaConnectionWrapper(handle)
+
+            ImpalaConnectionManager.fetch_impala_version(connection.handle)
         except Exception as ex:
             logger.debug("Connection error {}".format(ex))
             connection_ex = ex
@@ -241,7 +245,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
         # track usage
         payload = {
-            "event_type": "dbt_impala_open",
+            "event_type": tracker.TrackingEventType.OPEN,
             "auth": auth_type,
             "connection_state": connection.state,
             "elapsed_time": "{:.2f}".format(
@@ -268,7 +272,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection_close_end_time = time.time()
 
             payload = {
-                "event_type": "dbt_impala_close",
+                "event_type": tracker.TrackingEventType.CLOSE,
                 "connection_state": ConnectionState.CLOSED,
                 "elapsed_time": "{:.2f}".format(
                     connection_close_end_time - connection_close_start_time
@@ -280,6 +284,31 @@ class ImpalaConnectionManager(SQLConnectionManager):
             return connection
         except Exception as err:
             logger.debug(f"Error closing connection {err}")
+
+    @classmethod
+    def fetch_impala_version(cls, connection):
+
+        if ImpalaConnectionManager.impala_version: 
+            return ImpalaConnectionManager.impala_version
+
+        try:
+            sql = "select version()"
+            cursor = connection.cursor()
+            cursor.execute(sql)
+
+            res = cursor.fetchall()
+
+            ImpalaConnectionManager.impala_version = res[0][0].split("RELEASE")[0].strip()
+
+            tracker.populate_warehouse_info({ "version": ImpalaConnectionManager.impala_version, "build": res[0][0] })
+        except Exception as ex:
+            # we couldn't get the spark warehouse version, default to version 2
+            logger.debug(f"Cannot get impala version. Error: {ex}")
+            ImpalaConnectionManager.impala_version = "NA"
+
+            tracker.populate_warehouse_info({ "version": ImpalaConnectionManager.impala_version, "build": "NA" })
+
+        logger.debug(f"IMPALA VERSION {'ImpalaConnectionManager.impala_version'}")
 
     @classmethod
     def get_response(cls, cursor):
@@ -329,7 +358,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             # track usage
             payload = {
-                "event_type": "dbt_impala_start_query",
+                "event_type": tracker.TrackingEventType.START_QUERY,
                 "sql": log_sql,
                 "profile_name": self.profile.profile_name
             }
@@ -359,7 +388,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             elapsed_time = time.time() - pre
 
             payload = {
-                "event_type": "dbt_impala_end_query",
+                "event_type": tracker.TrackingEventType.END_QUERY,
                 "sql": log_sql,
                 "elapsed_time": "{:.2f}".format(elapsed_time),
                 "status": query_status,

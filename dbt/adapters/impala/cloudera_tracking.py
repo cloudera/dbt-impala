@@ -27,6 +27,15 @@ from dbt.adapters.base import Credentials
 from dbt.events import AdapterLogger
 from decouple import config
 
+# all event types
+class TrackingEventType:
+    DEBUG = "debug_and_fetch_permission"
+    OPEN = "open"
+    CLOSE = "close"
+    START_QUERY = "start_query"
+    END_QUERY = "end_query"
+    INCREMENTAL = "incremental"
+    MODEL_ACCESS = "model_access"
 
 # global logger
 logger = AdapterLogger("Tracker")
@@ -45,6 +54,9 @@ profile_info = {}
 
 # Json object to store dbt deployment environment variables
 dbt_deployment_env_info = {}
+
+# Json object for warehouse information
+warehouse_info = { "warehouse_version": { "version": "NA", "build": "NA" } }
 
 def populate_platform_info(cred: Credentials, ver):
     """
@@ -75,9 +87,9 @@ def populate_dbt_deployment_env_info():
     default_value = "{}"  # if environment variables doesn't exist add empty json as default
     dbt_deployment_env_info["dbt_deployment_env"] = json.loads(os.environ.get('DBT_DEPLOYMENT_ENV', default_value))
 
-def populate_unique_ids(cred: Credentials):
+def populate_unique_ids(cred: Credentials, userkey="username"):
     host = str(cred.host).encode()
-    user = str(cred.username).encode()
+    user = str(getattr(cred, userkey)).encode()
     timestamp = str(time.time()).encode()
 
     # dbt invocation id
@@ -93,7 +105,6 @@ def populate_unique_ids(cred: Credentials):
     # hashed session
     unique_ids["unique_session_hash"] = hashlib.md5(host + user + timestamp).hexdigest()
 
-
 def generate_profile_info(self):
     if not profile_info:
         # name of dbt project in profiles
@@ -103,6 +114,9 @@ def generate_profile_info(self):
         # number of threads in profiles
         profile_info["no_of_threads"] = self.profile.threads
 
+def populate_warehouse_info(w_info):
+    warehouse_info["warehouse_version"]["version"] = w_info["version"]
+    warehouse_info["warehouse_version"]["build"] = w_info["build"]
 
 def _merge_keys(source_dict, dest_dict):
     for key, value in source_dict.items():
@@ -188,6 +202,7 @@ def track_usage(tracking_payload):
     tracking_payload = _merge_keys(platform_info, tracking_payload)
     tracking_payload = _merge_keys(dbt_deployment_env_info, tracking_payload)
     tracking_payload = _merge_keys(profile_info, tracking_payload)
+    tracking_payload = _merge_keys(warehouse_info, tracking_payload)
 
     # form the tracking data
     tracking_data = {"data": json.dumps(tracking_payload)}
@@ -214,6 +229,8 @@ def track_usage(tracking_payload):
             "x-datacoral-passthrough": "true",
         }
 
+        logger.debug(f"Sending Event {data}")
+
         data = json.dumps([data])
 
         res = None
@@ -228,8 +245,6 @@ def track_usage(tracking_payload):
             usage_tracking = False
 
         return res
-
-    logger.debug(f"Sending Event {tracking_data}")
 
     # call the tracking function in a Thread
     the_track_thread = threading.Thread(

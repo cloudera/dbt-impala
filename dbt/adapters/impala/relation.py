@@ -42,7 +42,7 @@ class ImpalaRelation(BaseRelation):
     def __post_init__(self):
         if (self.type):
             tracker.track_usage({
-                "event_type": "dbt_impala_model_access",
+                "event_type": tracker.TrackingEventType.MODEL_ACCESS,
                 "model_name": self.render(),
                 "model_type": self.type,
                 "incremental_strategy": ""
@@ -54,7 +54,7 @@ class ImpalaRelation(BaseRelation):
     def log_relation(self, incremental_strategy):
         if (self.type):
             tracker.track_usage({
-                "event_type": "dbt_impala_new_incremental",
+                "event_type": tracker.TrackingEventType.INCREMENTAL,
                 "model_name": self.render(),
                 "model_type": self.type,
                 "incremental_strategy": incremental_strategy
