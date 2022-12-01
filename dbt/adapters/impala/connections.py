@@ -364,7 +364,10 @@ class ImpalaConnectionManager(SQLConnectionManager):
             }
 
             for key, value in additional_info.items():
-                payload[key] = value
+                if key == "node_id":
+                    payload["model_name"] = value
+                else:
+                    payload[key] = value
 
             tracker.track_usage(payload)
 
