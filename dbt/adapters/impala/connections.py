@@ -302,7 +302,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             tracker.populate_warehouse_info({ "version": ImpalaConnectionManager.impala_version, "build": res[0][0] })
         except Exception as ex:
-            # we couldn't get the spark warehouse version, default to version 2
+            # we couldn't get the impala warehouse version
             logger.debug(f"Cannot get impala version. Error: {ex}")
             ImpalaConnectionManager.impala_version = "NA"
 
