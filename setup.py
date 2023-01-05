@@ -67,7 +67,7 @@ setup(
         'dbt-core~={}'.format(dbt_core_version),
         "impyla==0.18",
         "python-decouple>=3.6",
-        "kerberos>=1.3.0",
+        # "kerberos>=1.3.0", # Not required per README, doesn't work on Windows
     ],
     classifiers=[
         "Development Status :: 4 - Beta",
