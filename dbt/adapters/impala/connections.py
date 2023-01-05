@@ -224,6 +224,20 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     retries=credentials.retries,
                 )
                 auth_type = "kerberos"
+            elif (
+                    credentials.auth_type == "PLAIN"
+                    or credentials.auth_type == "plain"
+            ):  # plain type connection
+                handle = impala.dbapi.connect(
+                    host=credentials.host,
+                    port=credentials.port,
+                    auth_mechanism="PLAIN",
+                    use_ssl=credentials.use_ssl,
+                    user=credentials.username,
+                    password=credentials.password,
+                    retries=credentials.retries,
+                )
+                auth_type = "plain"
             else:  # default, insecure connection
                 handle = impala.dbapi.connect(
                     host=credentials.host,
