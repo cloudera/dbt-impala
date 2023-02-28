@@ -116,7 +116,7 @@ class ImpalaAdapter(SQLAdapter):
                 LIST_RELATIONS_MACRO_NAME,
                 kwargs=kwargs
             )
-        except dbt.exceptions.RuntimeException as e:
+        except dbt.exceptions.DbtRuntimeError as e:
             errmsg = getattr(e, 'msg', '')
             if f"Database '{schema_relation}' not found" in errmsg:
                 return []
@@ -128,7 +128,7 @@ class ImpalaAdapter(SQLAdapter):
         relations = []
         for row in results:
             if len(row) != 2:
-                raise dbt.exceptions.RuntimeException(
+                raise dbt.exceptions.DbtRuntimeError(
                     f'Invalid value from "show table extended ...", '
                     f'got {len(row)} values, expected 4'
                 )
@@ -161,7 +161,7 @@ class ImpalaAdapter(SQLAdapter):
             try:
                 rows: List[agate.Row] = super().get_columns_in_relation(relation)
                 columns = self.parse_describe_extended(relation, rows)
-            except dbt.exceptions.RuntimeException as e:
+            except dbt.exceptions.DbtRuntimeError as e:
                 # impala would throw error when table doesn't exist
                 errmsg = getattr(e, "msg", "")
                 if "Table or view not found" in errmsg or "NoSuchTableException" in errmsg:
