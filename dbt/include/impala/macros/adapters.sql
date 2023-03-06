@@ -149,6 +149,7 @@
 
   {%- set sql_header = config.get('sql_header', none) -%}
   {%- set is_external = config.get('external') -%}
+  {%- set is_iceberg = config.get('is_iceberg') -%}
 
   {{ sql_header if sql_header is not none }}
 
@@ -159,6 +160,7 @@
     {{ ct_option_comment_relation(label="comment") }}
     {{ ct_option_row_format(label="row format") }}
     {{ ct_option_with_serdeproperties(label="with serdeproperties") }}
+    {% if is_iceberg == true -%} STORED BY ICEBERG {%- endif %}
     {{ ct_option_stored_as(label="stored as") }}
     {{ ct_option_location_clause(label="location") }} 
     {{ ct_option_cached_in(label="cached in") }}
