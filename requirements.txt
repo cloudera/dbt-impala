@@ -1,0 +1,4 @@
+dbt-core==1.3.3
+dbt-extractor==0.4.1
+impyla==0.18
+python-decouple>=3.6
