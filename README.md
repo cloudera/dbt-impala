@@ -16,10 +16,14 @@ We are actively working on next release 1.4 which will work with dbt-core 1.4
 Python >= 3.8
 dbt-core == 1.3.*
 
-To install the required dependencies for module to work
+For Development:
+
+Setup the virtualenv using following commands:
 ```
-pip install -r requirements.txt
+python -m venv .venv
+source .venv/bin/activate
 ```
+
 To install the required dependencies for development or tests
 ```
 pip install -r dev_requirements.txt
