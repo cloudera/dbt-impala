@@ -111,7 +111,6 @@ class TestSnapshotCheckColsImpala(BaseSnapshotCheckCols):
 class TestSnapshotTimestampImpala(BaseSnapshotTimestamp):
     pass
 
-@pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestBaseAdapterMethod(BaseAdapterMethod):
     pass
 
