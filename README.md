@@ -56,30 +56,20 @@ demo_project:
 |Authentication: LDAP|Yes|
 |Authentication: Kerberos|Yes|
 
-### Tests
+### Tests Coverage
 
-To locally test the adapter and test it against a given CDH cluster. We have the integration-tests suites written inside the tests directory. 
-
-To install the tests dependencies:
-```
-pip install -r dev_requirements.txt
-```
-
-To use the local version dbt-impala
-```
-pip install -e .
-```
-
-#### Testing Framework:
-
-To test the dbt adaptor, we are using the dbt-tests-adapter module which has predefined set of tests and test-data (fixtures). More details [how to test dbt-adapter](https://docs.getdbt.com/guides/dbt-ecosystem/adapter-development/4-testing-a-new-adapter)
-
-To run the tests against impala instance (as insecure):
-```
-IMPALA_HOST=<host> python3 -m pytest --profile cdh_endpoint
-```
-
-To run the tests against impala instance (via ldap)
-```
-IMPALA_HOST=<host> IMPALA_SCHEMA=<schema> IMPALA_USER=<user> IMPALA_PASSWORD=<password> python3 -m pytest --profile dwx_endpoint
-```
+#### Functional Tests
+| Name | Base |
+|------|-----------|
+|Materialization: Table|Yes|
+|Materialization: View|Yes|
+|Materialization: Incremental - Append|Yes|
+|Materialization: Incremental - Insert+Overwrite|No|
+|Materialization: Incremental - Merge|No|
+|Materialization: Ephemeral|No|
+|Seeds|Yes|
+|Tests|Yes|
+|Snapshots|No|
+|Documentation|No|
+|Authentication: LDAP|No|
+|Authentication: Kerberos|No|

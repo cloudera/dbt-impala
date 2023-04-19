@@ -9,3 +9,5 @@ __pycache__/
 *.log
 logs/
 .env
+.venv/
+test.env

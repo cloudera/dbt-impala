@@ -7,7 +7,7 @@ pytest_plugins = ["dbt.tests.fixtures.project"]
 
 
 def pytest_addoption(parser):
-	parser.addoption("--profile", action="store", default="chd_endpoint", type=str)
+	parser.addoption("--profile", action="store", default="cdh_endpoint", type=str)
 
 # Using @pytest.mark.skip_profile('apache_spark') uses the 'skip_by_profile_type'
 # autouse fixture below
@@ -34,7 +34,7 @@ def cdh_target():
 		'threads': 4,
 		'schema': os.getenv('IMPALA_SCHEMA') or 'dbt_adapter_test',
 		'host': os.getenv('IMPALA_HOST'),
-		'port': int(os.getenv('IMPALA_PORT') or 21050),
+		'port': int(os.getenv('IMPALA_PORT')),
 		'auth_type': 'insecure',
 		'use_http_transport': False
 	}
@@ -47,7 +47,7 @@ def dwx_target():
 		'use_http_transport': True,
 		'use_ssl': True,
 		'host':  os.getenv('IMPALA_HOST'),
-		'port':  int(os.getenv('IMPALA_PORT') or 443),
+		'port':  int(os.getenv('IMPALA_PORT')),
 		'schema': os.getenv('IMPALA_SCHEMA') or 'dbt_adapter_test',
 		'user': os.getenv('IMPALA_USER'),
 		'password': os.getenv('IMPALA_PASSWORD'),

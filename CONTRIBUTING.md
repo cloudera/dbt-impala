@@ -51,6 +51,49 @@ If you are a member of the `Cloudera` GitHub organization, you will have push ac
 
 When `dbt-impala` is installed this way, any changes you make to the `dbt-impala` source code will be reflected immediately (i.e. in your next local dbt invocation against a Impala target).
 
+## Testing
+
+### Initial setup
+
+`dbt-impala` contains [functional](https://github.com/cloudera/dbt-impala/tree/master/tests/functional/) tests. Functional tests require an actual Impala warehouse to test against.
+
+- You can run functional tests "locally" by configuring a `test.env` file with appropriate `ENV` variables.
+
+```
+cp test.env.example test.env
+$EDITOR test.env
+```
+
+WARNING: The parameters in your `test.env` file must link to a valid Impala instance. The `test.env` file you create is git-ignored, but please be _extra_ careful to never check in credentials or other sensitive information when developing.
+
+
+### "Local" test commands
+There are a few methods for running tests locally.
+
+#### `pytest`
+You may run a specific test or group of tests using `pytest` directly. Activate a Python virtualenv active with dev dependencies installed. Use the appropriate profile like cdh_endpoint or dwx_endpoint. Then, run tests like so:
+
+```sh
+# Note: replace $strings with valid names
+
+# run all impala functional tests in a directory
+python -m pytest tests/functional/$test_directory --profile dwx_endpoint
+python -m pytest tests/functional/adapter/test_basic.py --profile dwx_endpoint
+
+# run all impala functional tests in a module
+python -m pytest --profile dwx_endpoint tests/functional/$test_dir_and_filename.py
+python -m pytest --profile dwx_endpoint tests/functional/adapter/test_basic.py
+
+# run all impala functional tests in a class
+python -m pytest --profile dwx_endpoint tests/functional/$test_dir_and_filename.py::$test_class_name
+python -m pytest --profile dwx_endpoint tests/functional/adapter/test_basic.py::TestSimpleMaterializationsImpala
+
+# run a specific impala functional test
+python -m pytest --profile dwx_endpoint tests/functional/$test_dir_and_filename.py::$test_class_name::$test__method_name
+python -m pytest --profile dwx_endpoint tests/functional/adapter/test_basic.py::TestSimpleMaterializationsImpala::test_base
+```
+
+To configure the pytest setting, update pytest.ini. By default, all the tests run logs are captured in `logs/<test-run>/dbt.log` 
 
 ## Submitting a Pull Request
 
