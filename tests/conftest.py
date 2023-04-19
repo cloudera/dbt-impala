@@ -23,3 +23,4 @@ impala_ldap = {
 @pytest.fixture(scope="class")
 def dbt_profile_target():
     return impala_ldap
+
