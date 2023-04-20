@@ -55,3 +55,21 @@ demo_project:
 |Documentation|Yes|
 |Authentication: LDAP|Yes|
 |Authentication: Kerberos|Yes|
+
+### Tests Coverage
+
+#### Functional Tests
+| Name | Base |
+|------|-----------|
+|Materialization: Table|Yes|
+|Materialization: View|Yes|
+|Materialization: Incremental - Append|Yes|
+|Materialization: Incremental - Insert+Overwrite|No|
+|Materialization: Incremental - Merge|No|
+|Materialization: Ephemeral|No|
+|Seeds|Yes|
+|Tests|Yes|
+|Snapshots|No|
+|Documentation|No|
+|Authentication: LDAP|No|
+|Authentication: Kerberos|No|
