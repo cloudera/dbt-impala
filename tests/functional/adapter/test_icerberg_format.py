@@ -28,7 +28,8 @@ from tests.functional.adapter.test_basic import (
 )
 
 from dbt.tests.adapter.basic.files import (
-    seeds_base_csv,
+    model_base,
+    model_incremental,
     base_view_sql,
     schema_base_yml
 )
@@ -41,71 +42,13 @@ def is_iceberg_table(project, tableName):
             result = True 
     return result
 
-incremental_iceberg_sql = """
- {{ config(materialized="incremental", iceberg=true) }}
- select * from {{ source('raw', 'seed') }}
- {% if is_incremental() %}
- where id > (select max(id) from {{ this }})
- {% endif %}
-""".strip()
-
-# For iceberg table formats, check_relations_equal util is not working as expected
-# Impala upstream issue: https://issues.apache.org/jira/browse/IMPALA-12097
-# Hence removing this check from unit tests
-
-class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
-    @pytest.fixture(scope="class")
-    def models(self):
-        return {"incremental_test_model.sql": incremental_iceberg_sql, "schema.yml": schema_base_yml}
-
-    def test_incremental(self, project):
-        # seed command
-        results = run_dbt(["seed"])
-        assert len(results) == 2
-
-        # base table rowcount
-        relation = relation_from_name(project.adapter, "base")
-        result = project.run_sql(f"select count(*) as num_rows from {relation}", fetch="one")
-        assert result[0] == 10
-
-        # added table rowcount
-        relation = relation_from_name(project.adapter, "added")
-        result = project.run_sql(f"select count(*) as num_rows from {relation}", fetch="one")
-        assert result[0] == 20
-
-        # run command
-        # the "seed_name" var changes the seed identifier in the schema file
-        results = run_dbt(["run", "--vars", "seed_name: base"])
-        assert len(results) == 1
-        assert is_iceberg_table(project, relation_from_name(project.adapter, "incremental_test_model")) == True
-
-        # Uncomment the below check after IMPALA-12097 gets resolved
-        # check_relations_equal(project.adapter, ["base", "incremental_test_model"])
-
-        # change seed_name var
-        # the "seed_name" var changes the seed identifier in the schema file
-        results = run_dbt(["run", "--vars", "seed_name: added"])
-        assert len(results) == 1
-        assert is_iceberg_table(project, relation_from_name(project.adapter, "incremental_test_model")) == True
-
-        # Uncomment the below check after IMPALA-12097 gets resolved
-        # check_relations_equal(project.adapter, ["added", "incremental_test_model"])
-
-        # get catalog from docs generate
-        catalog = run_dbt(["docs", "generate"])
-        assert len(catalog.nodes) == 3
-        assert len(catalog.sources) == 1
-
-
 iceberg_base_table_sql = """
 {{
   config(
     materialized="table",
     iceberg=true
   )
-}}
-select * from {{ source('raw', 'seed') }}
-"""
+}}""".strip() + model_base
 
 iceberg_base_materialized_var_sql = """
 {{ 
@@ -113,10 +56,34 @@ iceberg_base_materialized_var_sql = """
     materialized=var("materialized_var", "table"),
     iceberg=true
   )
-}}
-select * from {{ source('raw', 'seed') }}
-"""
+}}""".strip() + model_base
 
+incremental_iceberg_sql = """
+ {{
+    config(
+        materialized="incremental",
+        iceberg=true
+    )
+}}
+""".strip() + model_incremental
+
+incremental_partition_iceberg_sql = """
+ {{
+    config(
+        materialized="incremental",
+        parition_by=["id_parition1", "id_parition2"],
+        iceberg=true
+    )
+}}
+select *, id as id_parition1, id as id_parition2 from {{ source('raw', 'seed') }}
+{% if is_incremental() %}
+    where id > (select max(id) from {{ this }})
+{% endif %}
+""".strip()
+
+# For iceberg table formats, check_relations_equal util is not working as expected
+# Impala upstream issue: https://issues.apache.org/jira/browse/IMPALA-12097
+# Hence removing this check from unit tests
 class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsImpala):
     @pytest.fixture(scope="class")
     def models(self):
@@ -194,3 +161,53 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
             "swappable": "table",
         }
         check_relation_types(project.adapter, expected)
+
+
+class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {"incremental_test_model.sql": incremental_iceberg_sql, "schema.yml": schema_base_yml}
+
+    def test_incremental(self, project):
+        # seed command
+        results = run_dbt(["seed"])
+        assert len(results) == 2
+
+        # base table rowcount
+        relation = relation_from_name(project.adapter, "base")
+        result = project.run_sql(f"select count(*) as num_rows from {relation}", fetch="one")
+        assert result[0] == 10
+
+        # added table rowcount
+        relation = relation_from_name(project.adapter, "added")
+        result = project.run_sql(f"select count(*) as num_rows from {relation}", fetch="one")
+        assert result[0] == 20
+
+        # run command
+        # the "seed_name" var changes the seed identifier in the schema file
+        results = run_dbt(["run", "--vars", "seed_name: base"])
+        assert len(results) == 1
+        assert is_iceberg_table(project, relation_from_name(project.adapter, "incremental_test_model")) == True
+
+        # Uncomment the below check after IMPALA-12097 gets resolved
+        # check_relations_equal(project.adapter, ["base", "incremental_test_model"])
+
+        # change seed_name var
+        # the "seed_name" var changes the seed identifier in the schema file
+        results = run_dbt(["run", "--vars", "seed_name: added"])
+        assert len(results) == 1
+        assert is_iceberg_table(project, relation_from_name(project.adapter, "incremental_test_model")) == True
+
+        # Uncomment the below check after IMPALA-12097 gets resolved
+        # check_relations_equal(project.adapter, ["added", "incremental_test_model"])
+
+        # get catalog from docs generate
+        catalog = run_dbt(["docs", "generate"])
+        assert len(catalog.nodes) == 3
+        assert len(catalog.sources) == 1
+
+
+class TestIncrementalPartitionIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {"incremental_test_model.sql": incremental_partition_iceberg_sql, "schema.yml": schema_base_yml}
