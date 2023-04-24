@@ -5,7 +5,6 @@ import os
 # Note: fixtures with session scope need to be local
 pytest_plugins = ["dbt.tests.fixtures.project"]
 
-
 def pytest_addoption(parser):
 	parser.addoption("--profile", action="store", default="cdh_endpoint", type=str)
 
@@ -24,6 +23,8 @@ def dbt_profile_target(request):
 		target = cdh_target()
 	elif profile_type == "dwx_endpoint":
 		target = dwx_target()
+	elif profile_type == "local_endpoint":
+		target = local_target()
 	else:
 		raise ValueError(f"Invalid profile type '{profile_type}'")
 	return target
@@ -38,6 +39,7 @@ def cdh_target():
 		'auth_type': 'insecure',
 		'use_http_transport': False
 	}
+
 
 def dwx_target():
 	return {
@@ -54,6 +56,17 @@ def dwx_target():
 		'http_path':  os.getenv('IMPALA_HTTP_PATH') or 'cliservice'
 	}
 
+def local_target():
+	return {
+		'type': 'impala',
+		'threads': 1,
+		'host': 'localhost',
+		'port': 21050,
+		'auth_type': 'insecure',
+		'use_http_transport': False,
+                'use_ssl': False
+	}
+
 @pytest.fixture(autouse=True)
 def skip_by_profile_type(request):
 	profile_type = request.config.getoption("--profile")
@@ -61,4 +74,3 @@ def skip_by_profile_type(request):
 		for skip_profile_type in request.node.get_closest_marker("skip_profile").args:
 			if skip_profile_type == profile_type:
 				pytest.skip("skipped on '{profile_type}' profile")
-

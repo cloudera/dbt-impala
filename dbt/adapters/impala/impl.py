@@ -164,8 +164,8 @@ class ImpalaAdapter(SQLAdapter):
             except dbt.exceptions.RuntimeException as e:
                 # impala would throw error when table doesn't exist
                 errmsg = getattr(e, "msg", "")
-                if "Table or view not found" in errmsg or "NoSuchTableException" in errmsg:
-                    pass
+                if "Table or view not found" in errmsg or "NoSuchTableException" in errmsg or "Could not resolve path" in errmsg:
+                    return []
                 else:
                     raise e
 
