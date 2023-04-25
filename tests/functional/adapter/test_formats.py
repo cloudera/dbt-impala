@@ -40,7 +40,7 @@ incremental_iceberg_sql = """
  {% endif %}
 """.strip()
 
-# For iceberg table formats, check_relations_equal macros is not working as expected
+# For iceberg table formats, check_relations_equal util is not working as expected
 # Impala upstream issue: https://issues.apache.org/jira/browse/IMPALA-12097
 # Hence removing this check from unit tests
 
