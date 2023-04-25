@@ -149,13 +149,17 @@
 
   {%- set sql_header = config.get('sql_header', none) -%}
   {%- set is_external = config.get('external') -%}
-  {%- set is_iceberg = config.get('is_iceberg') -%}
+  {%- set is_iceberg = config.get('iceberg') -%}
 
   {{ sql_header if sql_header is not none }}
 
   create {% if is_external == true -%}external{%- endif %} table
     {{ relation.include(schema=true) }}
-    {{ ct_option_partition_cols(label="partitioned by") }}
+    {% if is_iceberg == true -%}
+      {{ ct_option_partition_cols(label="partitioned by spec") }}
+    {% else %}
+      {{ ct_option_partition_cols(label="partitioned by") }}
+    {%- endif %}
     {{ ct_option_sort_cols(label="sort by") }}
     {{ ct_option_comment_relation(label="comment") }}
     {{ ct_option_row_format(label="row format") }}
