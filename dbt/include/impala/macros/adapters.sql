@@ -155,11 +155,7 @@
 
   create {% if is_external == true -%}external{%- endif %} table
     {{ relation.include(schema=true) }}
-    {% if is_iceberg == true -%}
-      {{ ct_option_partition_cols(label="partitioned by spec") }}
-    {% else %}
-      {{ ct_option_partition_cols(label="partitioned by") }}
-    {%- endif %}
+    {{ ct_option_partition_cols(label="partitioned by") }}
     {{ ct_option_sort_cols(label="sort by") }}
     {{ ct_option_comment_relation(label="comment") }}
     {{ ct_option_row_format(label="row format") }}
