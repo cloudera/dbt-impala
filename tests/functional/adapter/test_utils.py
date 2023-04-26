@@ -453,10 +453,10 @@ data_output as (
 calculate as (
 
     select
-        key,
+        key_column,
         {{ bool_or('val1 = val2') }} as value
     from util_data
-    group by key
+    group by key_column
 
 )
 
@@ -465,7 +465,7 @@ select
     data_output.value as expected
 from calculate
 left join data_output
-on calculate.key = data_output.key
+on calculate.key_column = data_output.key_column
 """
 
 class TestBoolOr(BaseBoolOr):
