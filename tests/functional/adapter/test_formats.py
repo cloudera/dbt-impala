@@ -32,6 +32,14 @@ from dbt.tests.adapter.basic.files import (
     schema_base_yml
 )
 
+def isIcebergTable(project, tableName):
+    rows = project.run_sql(f"describe formatted {tableName}", fetch="all")
+    result = False
+    for col_name, data_type, comment in rows:
+        if data_type and data_type.strip() == 'table_type' and comment and comment.strip() == 'ICEBERG':
+            result = True 
+    return result
+
 incremental_iceberg_sql = """
  {{ config(materialized="incremental", iceberg=true) }}
  select * from {{ source('raw', 'seed') }}
@@ -68,11 +76,13 @@ class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
         # the "seed_name" var changes the seed identifier in the schema file
         results = run_dbt(["run", "--vars", "seed_name: base"])
         assert len(results) == 1
+        assert isIcebergTable(project, relation_from_name(project.adapter, "incremental_test_model")) == True
 
         # change seed_name var
         # the "seed_name" var changes the seed identifier in the schema file
         results = run_dbt(["run", "--vars", "seed_name: added"])
         assert len(results) == 1
+        assert isIcebergTable(project, relation_from_name(project.adapter, "incremental_test_model")) == True
 
         # get catalog from docs generate
         catalog = run_dbt(["docs", "generate"])
@@ -109,7 +119,9 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
             "swappable.sql": iceberg_base_materialized_var_sql,
             "schema.yml": schema_base_yml,
         }
-    
+   
+
+
     def test_base(self, project):
 
         # seed command
@@ -134,6 +146,9 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
         }
         check_relation_types(project.adapter, expected)
 
+        assert isIcebergTable(project, relation_from_name(project.adapter, "table_model")) == True
+        assert isIcebergTable(project, relation_from_name(project.adapter, "swappable")) == True
+        
         # base table rowcount
         relation = relation_from_name(project.adapter, "base")
         result = project.run_sql(f"select count(*) as num_rows from {relation}", fetch="one")
@@ -147,6 +162,7 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
         # run_dbt changing materialized_var to view
         results = run_dbt(["run", "-m", "swappable", "--vars", "materialized_var: view"])
         assert len(results) == 1
+        assert isIcebergTable(project, relation_from_name(project.adapter, "swappable")) == False
 
         # check relation types, swappable is view
         expected = {
@@ -160,6 +176,7 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
         # run_dbt changing materialized_var to incremental
         results = run_dbt(["run", "-m", "swappable", "--vars", "materialized_var: incremental"])
         assert len(results) == 1
+        assert isIcebergTable(project, relation_from_name(project.adapter, "swappable")) == True
 
         # check relation types, swappable is table
         expected = {
@@ -169,4 +186,3 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
             "swappable": "table",
         }
         check_relation_types(project.adapter, expected)
-
