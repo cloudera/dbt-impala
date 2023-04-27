@@ -18,7 +18,8 @@ from dbt.tests.util import (
     run_dbt,
     check_result_nodes_by_name,
     relation_from_name,
-    check_relation_types
+    check_relation_types,
+    check_relations_equal
 )
 
 from tests.functional.adapter.test_basic import (
@@ -32,7 +33,7 @@ from dbt.tests.adapter.basic.files import (
     schema_base_yml
 )
 
-def isIcebergTable(project, tableName):
+def is_iceberg_table(project, tableName):
     rows = project.run_sql(f"describe formatted {tableName}", fetch="all")
     result = False
     for col_name, data_type, comment in rows:
@@ -76,13 +77,19 @@ class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
         # the "seed_name" var changes the seed identifier in the schema file
         results = run_dbt(["run", "--vars", "seed_name: base"])
         assert len(results) == 1
-        assert isIcebergTable(project, relation_from_name(project.adapter, "incremental_test_model")) == True
+        assert is_iceberg_table(project, relation_from_name(project.adapter, "incremental_test_model")) == True
+
+        # Uncomment the below check after IMPALA-12097 gets resolved
+        # check_relations_equal(project.adapter, ["base", "incremental_test_model"])
 
         # change seed_name var
         # the "seed_name" var changes the seed identifier in the schema file
         results = run_dbt(["run", "--vars", "seed_name: added"])
         assert len(results) == 1
-        assert isIcebergTable(project, relation_from_name(project.adapter, "incremental_test_model")) == True
+        assert is_iceberg_table(project, relation_from_name(project.adapter, "incremental_test_model")) == True
+
+        # Uncomment the below check after IMPALA-12097 gets resolved
+        # check_relations_equal(project.adapter, ["added", "incremental_test_model"])
 
         # get catalog from docs generate
         catalog = run_dbt(["docs", "generate"])
@@ -119,8 +126,6 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
             "swappable.sql": iceberg_base_materialized_var_sql,
             "schema.yml": schema_base_yml,
         }
-   
-
 
     def test_base(self, project):
 
@@ -146,13 +151,16 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
         }
         check_relation_types(project.adapter, expected)
 
-        assert isIcebergTable(project, relation_from_name(project.adapter, "table_model")) == True
-        assert isIcebergTable(project, relation_from_name(project.adapter, "swappable")) == True
+        assert is_iceberg_table(project, relation_from_name(project.adapter, "table_model")) == True
+        assert is_iceberg_table(project, relation_from_name(project.adapter, "swappable")) == True
         
         # base table rowcount
         relation = relation_from_name(project.adapter, "base")
         result = project.run_sql(f"select count(*) as num_rows from {relation}", fetch="one")
         assert result[0] == 10
+        
+        # Uncomment the below check after IMPALA-12097 gets resolved
+        # check_relations_equal(project.adapter, ["base", "view_model", "table_model", "swappable"])
 
         # check relations in catalog
         catalog = run_dbt(["docs", "generate"])
@@ -162,7 +170,7 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
         # run_dbt changing materialized_var to view
         results = run_dbt(["run", "-m", "swappable", "--vars", "materialized_var: view"])
         assert len(results) == 1
-        assert isIcebergTable(project, relation_from_name(project.adapter, "swappable")) == False
+        assert is_iceberg_table(project, relation_from_name(project.adapter, "swappable")) == False
 
         # check relation types, swappable is view
         expected = {
@@ -176,7 +184,7 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
         # run_dbt changing materialized_var to incremental
         results = run_dbt(["run", "-m", "swappable", "--vars", "materialized_var: incremental"])
         assert len(results) == 1
-        assert isIcebergTable(project, relation_from_name(project.adapter, "swappable")) == True
+        assert is_iceberg_table(project, relation_from_name(project.adapter, "swappable")) == True
 
         # check relation types, swappable is table
         expected = {
