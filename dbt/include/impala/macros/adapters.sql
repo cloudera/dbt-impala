@@ -149,7 +149,7 @@
 
   {%- set sql_header = config.get('sql_header', none) -%}
   {%- set is_external = config.get('external') -%}
-  {%- set is_iceberg = config.get('is_iceberg') -%}
+  {%- set is_iceberg = config.get('iceberg') -%}
 
   {{ sql_header if sql_header is not none }}
 
