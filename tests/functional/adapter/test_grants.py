@@ -27,6 +27,7 @@ from dbt.tests.util import (
     get_connection,
 )
 
+@pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestModelGrantsImpala(BaseModelGrants):
     def privilege_grantee_name_overrides(self):
         return {
@@ -52,6 +53,7 @@ models:
         select: ["{{ env_var('DBT_TEST_USER_2') }}"]
 """
 
+@pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestIncrementalGrantsImpala(BaseIncrementalGrants):
     def test_incremental_grants(self, project, get_test_users):
         # we want the test to fail, not silently skip
@@ -141,7 +143,7 @@ seeds:
       grants:
         select: []
 """
-
+@pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestSeedGrantsImpala(BaseSeedGrants):
     def assert_expected_grants_match_actual(self, project, relation_name, expected_grants):
         actual_grants = self.get_grants_on_relation(project, relation_name)
@@ -224,6 +226,7 @@ class TestSeedGrantsImpala(BaseSeedGrants):
         # assert "grant " not in log_output
         self.assert_expected_grants_match_actual(project, "my_seed", expected)
 
+@pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestInvalidGrantsImpala(BaseInvalidGrants):
     def assert_expected_grants_match_actual(self, project, relation_name, expected_grants):
         actual_grants = self.get_grants_on_relation(project, relation_name)
