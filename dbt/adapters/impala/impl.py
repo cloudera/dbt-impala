@@ -182,18 +182,26 @@ class ImpalaAdapter(SQLAdapter):
 
         # Convert the Row to a dict
         dict_rows = [dict(zip(row._keys, row._values)) for row in raw_rows]
+        # Find the separator between columns and partitions information
+        # by the DESCRIBE EXTENDED {{relation}} statement
+        partition_separator_pos = ImpalaAdapter.find_partition_information_separator(dict_rows)  # ensure that the class method is called
+ 
         # Find the separator between the rows and the metadata provided
         # by the DESCRIBE EXTENDED {{relation}} statement
-        pos = ImpalaAdapter.find_table_information_separator(dict_rows)  # ensure that the class method is called
+        table_separator_pos = ImpalaAdapter.find_table_information_separator(dict_rows)  # ensure that the class method is called
 
+        column_separator_pos = partition_separator_pos if partition_separator_pos > 0 else table_separator_pos
+        print('table_separator_pos', table_separator_pos)
+        print('partition_separator_pos', partition_separator_pos)
+        print('column_separator_pos', column_separator_pos)
         # Remove rows that start with a hash, they are comments
         rows = [
-            row for row in raw_rows[0:pos]
+            row for row in raw_rows[0:column_separator_pos]
             if not row['name'].startswith('#') and not row['name'] == ''
         ]
         # trim the fields so that these are clean key,value pairs and metadata.get() correctly returns the values
         metadata = {
-            col['name'].split(":")[0].strip(): col['type'].strip() for col in raw_rows[pos + 1:]
+            col['name'].split(":")[0].strip(): col['type'].strip() for col in raw_rows[table_separator_pos + 1:]
             if col['name'] and not col['name'].startswith('#') and not col['name'] == '' and col['type']
         }
 
@@ -211,6 +219,17 @@ class ImpalaAdapter(SQLAdapter):
             column_index=idx,
             dtype=column['type'],
         ) for idx, column in enumerate(rows)]
+
+    @staticmethod
+    def find_partition_information_separator(rows: List[dict]) -> int:
+        pos = 0
+        for row in rows:
+            if row['name'].startswith('# Partition Transform Information'):
+                found = True
+                break
+            pos += 1
+        result = 0 if (pos == len(rows)) else pos
+        return result
 
     @staticmethod
     def find_table_information_separator(rows: List[dict]) -> int:

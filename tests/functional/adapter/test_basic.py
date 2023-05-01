@@ -100,6 +100,33 @@ class TestIncrementalImpala(BaseIncremental):
         assert len(catalog.nodes) == 3
         assert len(catalog.sources) == 1
 
+incremental_single_partitionby_sql = """
+ {{ config(materialized="incremental", partition_by="id_partition") }}
+ select *, id as id_partition from {{ source('raw', 'seed') }}
+ {% if is_incremental() %}
+ where id > (select max(id) from {{ this }})
+ {% endif %}
+""".strip()
+
+class TestIncrementalWithSinglePartitionKeyImpala(TestIncrementalImpala):
+   @pytest.fixture(scope="class")
+   def models(self):
+        return {"incremental_test_model.sql": incremental_single_partitionby_sql, "schema.yml": schema_base_yml}
+
+incremental_multiple_partitionby_sql = """
+ {{ config(materialized="incremental", partition_by=["id_partition1", "id_partition2"]) }}
+ select *, id as id_partition1, id as id_partition2 from {{ source('raw', 'seed') }}
+ {% if is_incremental() %}
+ where id > (select max(id) from {{ this }})
+ {% endif %}
+""".strip()
+
+class TestIncrementalWithMultiplePartitionKeyImpala(TestIncrementalImpala):
+   @pytest.fixture(scope="class")
+   def models(self):
+        return {"incremental_test_model.sql": incremental_multiple_partitionby_sql, "schema.yml": schema_base_yml}
+
+
 class TestGenericTestsImpala(BaseGenericTests):
     pass
 
