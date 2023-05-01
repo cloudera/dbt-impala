@@ -100,6 +100,19 @@ class TestIncrementalImpala(BaseIncremental):
         assert len(catalog.nodes) == 3
         assert len(catalog.sources) == 1
 
+incremental_partitionby_sql = """
+ {{ config(materialized="incremental", partition_by="id_partition") }}
+ select *, id as id_partition from {{ source('raw', 'seed') }}
+ {% if is_incremental() %}
+ where id > (select max(id) from {{ this }})
+ {% endif %}
+""".strip()
+
+class TestIncrementalWithPartitionImpala(TestIncrementalImpala):
+   @pytest.fixture(scope="class")
+   def models(self):
+        return {"incremental_test_model.sql": incremental_partitionby_sql, "schema.yml": schema_base_yml}
+
 class TestGenericTestsImpala(BaseGenericTests):
     pass
 
