@@ -28,45 +28,54 @@
 
 {% endmacro %}
 
+{% macro get_quoted_csv_unique(column_names, merge_list) %}
+    {% set all_columns = [] %}
+    {% for col in column_names -%}
+        {% do all_columns.append(adapter.quote(col)) %}
+    {%- endfor %}
+    {% if merge_list is string %}
+        {% do all_columns.append(adapter.quote(merge_list)) %}
+    {% else %}
+        {% for col in merge_list -%}
+            {% do all_columns.append(adapter.quote(col)) %}
+        {%- endfor %}
+    {% endif %}
+    {% set uniq_columns_quoted = all_columns | unique %}
+
+    {%- set uniq_cols_csv = uniq_columns_quoted | join(', ') -%}
+    {{ return(uniq_cols_csv) }}
+
+{% endmacro %}
+
 {% macro get_insert_overwrite_sql(target, source, dest_columns) -%}
 
     {%- set raw_strategy = config.get('incremental_strategy', default='append')  -%}
     {%- set partition_cols = config.get('partition_by', validator=validation.any[list]) -%}
     
+    {% if partition_cols is string %}
+        {%- set partition_col = partition_cols -%}
+    {% else %}
+        {%- set partition_col = partition_cols[0] -%}
+    {% endif %}
+
+    {%- set dest_cols_csv = get_quoted_csv_exclude(dest_columns | map(attribute="name"), "") -%}
+    {%- set dest_cols_csv_exclude = get_quoted_csv_exclude(dest_columns | map(attribute="name"), partition_col) -%}
+    {%- set dest_cols_csv_unique = get_quoted_csv_unique(dest_columns | map(attribute="name"), partition_cols) -%}
+
     {% if partition_cols is not none and raw_strategy == 'insert_overwrite' %}
-        {% if partition_cols is string %}
-           {%- set partition_col = partition_cols -%}
-        {% else %}
-           {%- set partition_col = partition_cols[0] -%}
-        {% endif %}
-
-        {%- set dest_cols_csv = get_quoted_csv_exclude(dest_columns | map(attribute="name"), "") -%}
-        {%- set dest_cols_csv_exclude = get_quoted_csv_exclude(dest_columns | map(attribute="name"), partition_col) -%}
-
         insert overwrite {{ target }} ({{ dest_cols_csv_exclude }}) partition({{ partition_col }})
             select {{ dest_cols_csv }}
             from {{ source }}
     {% elif partition_cols is not none and raw_strategy == 'append' %}
-        {% if partition_cols is string %}
-           {%- set partition_col = partition_cols -%}
-        {% else %}
-           {%- set partition_col = partition_cols[0] -%}
-        {% endif %}
-
-        {%- set dest_cols_csv = get_quoted_csv_exclude(dest_columns | map(attribute="name"), "") -%}
-        {%- set dest_cols_csv_exclude = get_quoted_csv_exclude(dest_columns | map(attribute="name"), partition_col) -%}
-
         insert into {{ target }} ({{ dest_cols_csv_exclude }}) partition({{ partition_col }})
         (
             select {{ dest_cols_csv }}
             from {{ source }}
         )
     {% else %}
-        {%- set dest_cols_csv = get_quoted_csv_exclude(dest_columns | map(attribute="name"), "") -%}
-
-        insert into {{ target }} ({{ dest_cols_csv }})
+        insert into {{ target }} ({{ dest_cols_csv_unique }})
         (
-            select {{ dest_cols_csv }}
+            select {{ dest_cols_csv_unique }}
             from {{ source }}
         )
     {% endif %}
