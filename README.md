@@ -41,35 +41,40 @@ demo_project:
 ```
 
 ## Supported features
-| Name | Supported |
-|------|-----------|
-|Materialization: Table|Yes|
-|Materialization: View|Yes|
-|Materialization: Incremental - Append|Yes|
-|Materialization: Incremental - Insert+Overwrite|Yes|
-|Materialization: Incremental - Merge|No|
-|Materialization: Ephemeral|No|
-|Seeds|Yes|
-|Tests|Yes|
-|Snapshots|Yes|
-|Documentation|Yes|
-|Authentication: LDAP|Yes|
-|Authentication: Kerberos|Yes|
+| Name | Supported | Iceberg |
+|------|-----------|---------|
+|Materialization: View|Yes| N/A |
+|Materialization: Table|Yes| Yes |
+|Materialization: Table with Partitions |Yes| Yes |
+|Materialization: Incremental - Append|Yes| Yes |
+|Materialization: Incremental - Append with Partitions |Yes| Yes |
+|Materialization: Incremental - Insert+Overwrite |Yes| Yes |
+|Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes |
+|Materialization: Incremental - Merge|No| No |
+|Materialization: Ephemeral|Yes| Yes |
+|Seeds|Yes| Yes |
+|Tests|Yes| Yes |
+|Snapshots|No| No |
+|Documentation|Yes| Yes |
+|Authentication: LDAP|Yes| Yes |
+|Authentication: Kerberos|Yes| No |
 
 ### Tests Coverage
 
 #### Functional Tests
-| Name | Base |
-|------|-----------|
-|Materialization: Table|Yes|
-|Materialization: View|Yes|
-|Materialization: Incremental - Append|Yes|
-|Materialization: Incremental - Insert+Overwrite|No|
-|Materialization: Incremental - Merge|No|
-|Materialization: Ephemeral|No|
-|Seeds|Yes|
-|Tests|Yes|
-|Snapshots|No|
-|Documentation|No|
-|Authentication: LDAP|No|
-|Authentication: Kerberos|No|
+| Name | Base | Iceberg |
+|------|------|---------|
+|Materialization: View|Yes| N/A |
+|Materialization: Table|Yes| Yes |
+|Materialization: Table with Partitions |Yes| Yes |
+|Materialization: Incremental - Append|Yes| Yes |
+|Materialization: Incremental - Append with Partitions |Yes| Yes |
+|Materialization: Incremental - Insert+Overwrite |Yes| Yes |
+|Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes |
+|Materialization: Ephemeral|Yes| Yes |
+|Seeds|Yes| Yes |
+|Tests|Yes| Yes |
+|Snapshots|No| No |
+|Documentation| Yes | Yes |
+|Authentication: LDAP|Yes| Yes |
+|Authentication: Kerberos|No| No |
