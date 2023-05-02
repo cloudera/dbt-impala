@@ -32,6 +32,7 @@
 
     {% set raw_strategy = config.get('incremental_strategy') or 'append' %}
     {%- set partition_cols = config.get('partition_by', validator=validation.any[list]) -%}
+    {% set is_iceberg = config.get('iceberg') %}
     
     {% if partition_cols is not none and raw_strategy == 'insert_overwrite' %}
         {% if partition_cols is string %}
@@ -43,9 +44,15 @@
         {%- set dest_cols_csv = get_quoted_csv_exclude(dest_columns | map(attribute="name"), "") -%}
         {%- set dest_cols_csv_exclude = get_quoted_csv_exclude(dest_columns | map(attribute="name"), partition_col) -%}
 
-        insert overwrite {{ target }} ({{ dest_cols_csv_exclude }}) partition({{ partition_col }})
-            select {{ dest_cols_csv }}
-            from {{ source }}
+	{% if is_iceberg == true -%}
+            insert overwrite {{ target }} ({{ dest_cols_csv }}) partition({{ partition_col }})
+                select {{ dest_cols_csv }}
+                from {{ source }}
+        {% else %}
+            insert overwrite {{ target }} ({{ dest_cols_csv_exclude }}) partition({{ partition_col }})
+                select {{ dest_cols_csv }}
+                from {{ source }}
+        {%- endif %}
     {% elif partition_cols is not none and raw_strategy == 'append' %}
         {% if partition_cols is string %}
            {%- set partition_col = partition_cols -%}

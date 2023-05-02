@@ -67,6 +67,7 @@ incremental_iceberg_sql = """
 }}
 """.strip() + model_incremental
 
+
 incremental_partition_iceberg_sql = """
  {{
     config(
@@ -90,6 +91,21 @@ incremental_multiple_partition_iceberg_sql = """
     )
 }}
 select *, id as id_partition1, id as id_partition2 from {{ source('raw', 'seed') }}
+{% if is_incremental() %}
+    where id > (select max(id) from {{ this }})
+{% endif %}
+""".strip()
+
+insertoverwrite_iceberg_sql = """
+ {{
+    config(
+        materialized="incremental",
+        incremental_strategy="insert_overwrite",
+        partition_by="id_partition1",
+        iceberg=true
+    )
+}}
+select *, id as id_partition1 from {{ source('raw', 'seed') }}
 {% if is_incremental() %}
     where id > (select max(id) from {{ this }})
 {% endif %}
@@ -230,3 +246,8 @@ class TestIncrementalMultiplePartitionIcebergFormatImpala(TestIncrementalIceberg
     @pytest.fixture(scope="class")
     def models(self):
         return {"incremental_test_model.sql": incremental_multiple_partition_iceberg_sql, "schema.yml": schema_base_yml}
+
+class TestInsertoverwriteIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {"incremental_test_model.sql": insertoverwrite_iceberg_sql, "schema.yml": schema_base_yml}
