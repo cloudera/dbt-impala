@@ -71,11 +71,25 @@ incremental_partition_iceberg_sql = """
  {{
     config(
         materialized="incremental",
-        parition_by=["id_parition1", "id_parition2"],
+        partition_by="id_partition1",
         iceberg=true
     )
 }}
-select *, id as id_parition1, id as id_parition2 from {{ source('raw', 'seed') }}
+select *, id as id_partition1 from {{ source('raw', 'seed') }}
+{% if is_incremental() %}
+    where id > (select max(id) from {{ this }})
+{% endif %}
+""".strip()
+
+incremental_multiple_partition_iceberg_sql = """
+ {{
+    config(
+        materialized="incremental",
+        partition_by=["id_partition1", "id_partition2"],
+        iceberg=true
+    )
+}}
+select *, id as id_partition1, id as id_partition2 from {{ source('raw', 'seed') }}
 {% if is_incremental() %}
     where id > (select max(id) from {{ this }})
 {% endif %}
@@ -211,3 +225,8 @@ class TestIncrementalPartitionIcebergFormatImpala(TestIncrementalIcebergFormatIm
     @pytest.fixture(scope="class")
     def models(self):
         return {"incremental_test_model.sql": incremental_partition_iceberg_sql, "schema.yml": schema_base_yml}
+
+class TestIncrementalMultiplePartitionIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {"incremental_test_model.sql": incremental_multiple_partition_iceberg_sql, "schema.yml": schema_base_yml}
