@@ -31,9 +31,6 @@
 {% macro get_insert_overwrite_sql(target, source, dest_columns) -%}
 
     {% set raw_strategy = config.get('incremental_strategy') or 'append' %}
-    {% if raw_strategy == None %}
-        {% set raw_strategy = 'append' %}
-    {% endif %}
     {%- set partition_cols = config.get('partition_by', validator=validation.any[list]) -%}
 
     {% if partition_cols is not none and raw_strategy == 'insert_overwrite' %}

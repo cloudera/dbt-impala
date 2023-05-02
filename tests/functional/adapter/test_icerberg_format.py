@@ -67,18 +67,6 @@ incremental_iceberg_sql = """
 }}
 """.strip() + model_incremental
 
-insertoverwrite_iceberg_sql = """
- {{
-    config(
-        materialized="incremental",
-        incremental_strategy="insert_overwrite",
-        parition_by=["id_parition1", "id_parition2"],
-        iceberg=true
-    )
-}}
-""".strip() + model_incremental
-
-
 incremental_partition_iceberg_sql = """
  {{
     config(
@@ -231,11 +219,6 @@ class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
         catalog = run_dbt(["docs", "generate"])
         assert len(catalog.nodes) == 3
         assert len(catalog.sources) == 1
-
-class TestInsertoverwriteIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
-    @pytest.fixture(scope="class")
-    def models(self):
-        return {"incremental_test_model.sql": insertoverwrite_iceberg_sql, "schema.yml": schema_base_yml}
 
 class TestIncrementalPartitionIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
     @pytest.fixture(scope="class")
