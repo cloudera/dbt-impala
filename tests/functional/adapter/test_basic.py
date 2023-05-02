@@ -100,6 +100,19 @@ class TestIncrementalImpala(BaseIncremental):
         assert len(catalog.nodes) == 3
         assert len(catalog.sources) == 1
 
+insertoverwrite_sql = """
+ {{ config(materialized="incremental", incremental_strategy="insert_overwrite", partition_by="id_partition") }}
+ select *, id as id_partition from {{ source('raw', 'seed') }}
+ {% if is_incremental() %}
+ where id > (select max(id) from {{ this }})
+ {% endif %}
+""".strip()
+
+class TestInsertoverwriteImpala(TestIncrementalImpala):
+   @pytest.fixture(scope="class")
+   def models(self):
+        return {"incremental_test_model.sql": insertoverwrite_sql, "schema.yml": schema_base_yml}
+
 incremental_single_partitionby_sql = """
  {{ config(materialized="incremental", partition_by="id_partition") }}
  select *, id as id_partition from {{ source('raw', 'seed') }}

@@ -191,9 +191,6 @@ class ImpalaAdapter(SQLAdapter):
         table_separator_pos = ImpalaAdapter.find_table_information_separator(dict_rows)  # ensure that the class method is called
 
         column_separator_pos = partition_separator_pos if partition_separator_pos > 0 else table_separator_pos
-        print('table_separator_pos', table_separator_pos)
-        print('partition_separator_pos', partition_separator_pos)
-        print('column_separator_pos', column_separator_pos)
         # Remove rows that start with a hash, they are comments
         rows = [
             row for row in raw_rows[0:column_separator_pos]
