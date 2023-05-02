@@ -67,6 +67,18 @@ incremental_iceberg_sql = """
 }}
 """.strip() + model_incremental
 
+insertoverwrite_iceberg_sql = """
+ {{
+    config(
+        materialized="incremental",
+        incremental_strategy="insert_overwrite",
+        parition_by=["id_parition1", "id_parition2"],
+        iceberg=true
+    )
+}}
+""".strip() + model_incremental
+
+
 incremental_partition_iceberg_sql = """
  {{
     config(
