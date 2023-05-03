@@ -62,12 +62,21 @@
 
         {%- set dest_cols_csv = get_quoted_csv_exclude(dest_columns | map(attribute="name"), "") -%}
         {%- set dest_cols_csv_exclude = get_quoted_csv_exclude(dest_columns | map(attribute="name"), partition_col) -%}
+	
+	{% if is_iceberg == true -%}
+            insert into {{ target }} ({{ dest_cols_csv }}) partition({{ partition_col }})
+            (
+              select {{ dest_cols_csv }}
+              from {{ source }}
+            )
+        {% else %}	
+            insert into {{ target }} ({{ dest_cols_csv_exclude }}) partition({{ partition_col }})
+            (
+              select {{ dest_cols_csv }}
+              from {{ source }}
+            )
+        {%- endif %}
 
-        insert into {{ target }} ({{ dest_cols_csv_exclude }}) partition({{ partition_col }})
-        (
-            select {{ dest_cols_csv }}
-            from {{ source }}
-        )
     {% else %}
         {%- set dest_cols_csv = get_quoted_csv_exclude(dest_columns | map(attribute="name"), "") -%}
 
