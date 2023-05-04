@@ -46,7 +46,7 @@ iceberg_base_table_sql = """
 {{
   config(
     materialized="table",
-    iceberg=true
+    table_type="iceberg"
   )
 }}""".strip() + model_base
 
@@ -54,7 +54,7 @@ iceberg_base_materialized_var_sql = """
 {{ 
   config(
     materialized=var("materialized_var", "table"),
-    iceberg=true
+    table_type="iceberg"
   )
 }}""".strip() + model_base
 
@@ -62,7 +62,7 @@ incremental_iceberg_sql = """
  {{
     config(
         materialized="incremental",
-        iceberg=true
+        table_type="iceberg"
     )
 }}
 """.strip() + model_incremental
@@ -73,7 +73,7 @@ incremental_partition_iceberg_sql = """
     config(
         materialized="incremental",
         partition_by="id_partition1",
-        iceberg=true
+        table_type="iceberg"
     )
 }}
 select *, id as id_partition1 from {{ source('raw', 'seed') }}
@@ -87,7 +87,7 @@ incremental_multiple_partition_iceberg_sql = """
     config(
         materialized="incremental",
         partition_by=["id_partition1", "id_partition2"],
-        iceberg=true
+        table_type="iceberg"
     )
 }}
 select *, id as id_partition1, id as id_partition2 from {{ source('raw', 'seed') }}
@@ -102,7 +102,7 @@ insertoverwrite_iceberg_sql = """
         materialized="incremental",
         incremental_strategy="insert_overwrite",
         partition_by="id_partition1",
-        iceberg=true
+        table_type="iceberg"
     )
 }}
 select *, id as id_partition1 from {{ source('raw', 'seed') }}

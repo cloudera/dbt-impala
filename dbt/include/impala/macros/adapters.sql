@@ -149,13 +149,13 @@
 
   {%- set sql_header = config.get('sql_header', none) -%}
   {%- set is_external = config.get('external') -%}
-  {%- set is_iceberg = config.get('iceberg') -%}
+  {%- set table_type = config.get('table_type') -%}
 
   {{ sql_header if sql_header is not none }}
 
   create {% if is_external == true -%}external{%- endif %} table
     {{ relation.include(schema=true) }}
-    {% if is_iceberg == true -%}
+    {% if table_type == 'iceberg' -%}
       {{ ct_option_partition_cols(label="partitioned by spec") }}
     {% else %}
       {{ ct_option_partition_cols(label="partitioned by") }}
@@ -164,7 +164,7 @@
     {{ ct_option_comment_relation(label="comment") }}
     {{ ct_option_row_format(label="row format") }}
     {{ ct_option_with_serdeproperties(label="with serdeproperties") }}
-    {% if is_iceberg == true -%} STORED BY ICEBERG {%- endif %}
+    {%- if table_type == 'iceberg' -%} STORED BY ICEBERG {%- endif -%}
     {{ ct_option_stored_as(label="stored as") }}
     {{ ct_option_location_clause(label="location") }} 
     {{ ct_option_cached_in(label="cached in") }}
