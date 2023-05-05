@@ -49,6 +49,8 @@ If you are a member of the `Cloudera` GitHub organization, you will have push ac
 
 4. Install `dbt-impala` and development dependencies in the active `virtualenv`. Run `pip install -e . -r dev-requirements.txt`.
 
+5. Add the pre-commit hook. Run `pre-commit install`
+
 When `dbt-impala` is installed this way, any changes you make to the `dbt-impala` source code will be reflected immediately (i.e. in your next local dbt invocation against a Impala target).
 
 ## Testing
