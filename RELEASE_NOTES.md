@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.4 (May 5nd, 2023)
+Added support for iceberg table format
+Added support for plain authorization connection
+Added support for Python 3.7
+Added contribution guideline for developers
+Added capability to run integration tests against an endpoint
+Added set of integration tests to cover major use-cases
+Bug fixes:
+1. Adaptor should return empty list if table doesn't exist rather than throwing error
+2. Fixed the partition by clause queries ie remove duplicate columns
+3. Fixed the increment behavior with partition, ie to use partitions during the increment append
+4. Fixed the incremental insert queries syntax, to support iceberg format
+3. Fixed broken integration tests
+
 ## 1.3.0 (Nov 18th, 2022)
 Added dbt-core 1.3.0 support
 
