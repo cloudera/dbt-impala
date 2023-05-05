@@ -166,10 +166,10 @@
     {{ ct_option_with_serdeproperties(label="with serdeproperties") }}
     {% if is_iceberg == true -%} STORED BY ICEBERG {%- endif %}
     {{ ct_option_stored_as(label="stored as") }}
-    {{ ct_option_location_clause(label="location") }} 
+    {{ ct_option_location_clause(label="location") }}
     {{ ct_option_cached_in(label="cached in") }}
     {{ ct_option_tbl_properties(label="tblproperties") }}
-  as 
+  as
     {{ sql }}
   ;
 {%- endmacro %}
@@ -218,7 +218,7 @@
       {% do return(true) %}
     {%- endfor -%}
   {%- endif -%}
-  
+
   {% do return(false) %}
 {% endmacro %}
 
@@ -228,7 +228,7 @@
 
   {%- if relation_exists -%}
     {% set result_set = run_query('describe extended ' ~ relation) %}
-  
+
     {% if execute %}
       {%- for rs in result_set -%}
         {%- if rs[0].startswith('Table Type') -%}
@@ -246,13 +246,13 @@
       {%- endfor -%}
     {%- endif -%}
   {%- endif -%}
-  
+
   {% do return(rel_type) %}
 {% endmacro %}
 
 {% macro impala__rename_relation(from_relation, to_relation) -%}
   {% set from_rel_type = get_relation_type(from_relation) %}
-  
+
   {% call statement('drop_relation_if_exists_table') %}
     drop table if exists {{ to_relation }}
   {% endcall %}
@@ -291,7 +291,7 @@
     {%- endcall %}
 {% endmacro %}
 
-/* impala has two hash functions, both are not perfect hash function: fnv_hash and murmur_hash, 
+/* impala has two hash functions, both are not perfect hash function: fnv_hash and murmur_hash,
    the earlier one seems be available from older version and hence is being used here */
 {% macro impala__snapshot_hash_arguments(args) -%}
     hex(fnv_hash(concat({%- for arg in args -%}
@@ -317,7 +317,7 @@
     {% endcall %}
     {%- set row_count = load_result('row_count') -%}
 
-    {% do return(row_count['data'][0][0]) %}    
+    {% do return(row_count['data'][0][0]) %}
 {% endmacro %}
 
 {% macro get_new_inserts_count(relation_name) %}
@@ -326,7 +326,7 @@
     {% endcall %}
     {%- set inserts_count = load_result('inserts_count') -%}
 
-    {% do return(inserts_count['data'][0][0]) %}    
+    {% do return(inserts_count['data'][0][0]) %}
 {% endmacro %}
 
 {% macro fetch_rows_to_insert(target_relation, staging_table, insert_cols) %}
@@ -382,7 +382,7 @@
 
       /*
       1. if the staging table has no entries, then simply do nothing
-      2. if the staging table has entries, drop the existing snapshot table, build a new one 
+      2. if the staging table has entries, drop the existing snapshot table, build a new one
        */
 
       {% set row_count = get_row_count(staging_table) %}
@@ -397,7 +397,7 @@
         {% set build_sql = build_snapshot_table(strategy, model['compiled_sql']) %}
         {% set final_sql = create_table_as(False, target_relation, build_sql) %}
       {% elif row_count > 0 and row_count == insert_count %} /* insert, if all changes are of that type */
-        
+
         {% set source_columns = adapter.get_columns_in_relation(staging_table)
                                    | rejectattr('name', 'equalto', 'dbt_change_type')
                                    | rejectattr('name', 'equalto', 'DBT_CHANGE_TYPE')
@@ -409,7 +409,7 @@
         {% for column in source_columns %}
           {% do quoted_source_columns.append(adapter.quote(column.name)) %}
         {% endfor %}
-        
+
         {% set final_sql = fetch_rows_to_insert(target_relation, staging_table, quoted_source_columns) %}
       {% else %}
         {% set final_sql = 'select 1' %} /* dummy sql */
@@ -442,4 +442,3 @@
   {{ return({'relations': [target_relation]}) }}
 
 {% endmaterialization %}
-

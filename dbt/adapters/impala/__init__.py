@@ -23,6 +23,5 @@ from dbt.include import impala
 
 
 Plugin = AdapterPlugin(
-    adapter=ImpalaAdapter,
-    credentials=ImpalaCredentials,
-    include_path=impala.PACKAGE_PATH)
+    adapter=ImpalaAdapter, credentials=ImpalaCredentials, include_path=impala.PACKAGE_PATH
+)

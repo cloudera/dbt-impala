@@ -13,4 +13,5 @@
 # limitations under the License.
 
 import os
+
 PACKAGE_PATH = os.path.dirname(__file__)

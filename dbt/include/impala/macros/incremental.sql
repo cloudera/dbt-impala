@@ -31,7 +31,7 @@
    {% if on_schema_change not in ['fail', 'ignore'] %}
      {% set log_message = 'Invalid value for on_schema_change (%s) specified. Setting default value of %s.' % (on_schema_change, default) %}
      {% do log(log_message) %}
-     
+
      {% do exceptions.raise_compiler_error(log_message) %}
 
      {{ return(default) }}
@@ -71,7 +71,7 @@
   {%- set full_refresh_mode = (should_full_refresh()  or existing_relation.is_view) -%}
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
 
-  -- log incremental strategy 
+  -- log incremental strategy
   {% do target_relation.log_relation(incremental_strategy) %}
 
   -- the temp_ and backup_ relations should not already exist in the database; get_relation
@@ -147,4 +147,3 @@
 
   {{ return({'relations': [target_relation]}) }}
 {%- endmaterialization %}
-

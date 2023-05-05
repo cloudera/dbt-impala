@@ -27,6 +27,7 @@ from dbt.tests.util import (
     get_connection,
 )
 
+
 @pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestModelGrantsImpala(BaseModelGrants):
     def privilege_grantee_name_overrides(self):
@@ -43,6 +44,7 @@ class TestModelGrantsImpala(BaseModelGrants):
                 return False
         return True
 
+
 user2_incremental_model_schema_yml = """
 version: 2
 models:
@@ -52,6 +54,7 @@ models:
       grants:
         select: ["{{ env_var('DBT_TEST_USER_2') }}"]
 """
+
 
 @pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestIncrementalGrantsImpala(BaseIncrementalGrants):
@@ -118,6 +121,7 @@ class TestIncrementalGrantsImpala(BaseIncrementalGrants):
                 return False
         return True
 
+
 user2_schema_base_yml = """
 version: 2
 seeds:
@@ -143,6 +147,8 @@ seeds:
       grants:
         select: []
 """
+
+
 @pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestSeedGrantsImpala(BaseSeedGrants):
     def assert_expected_grants_match_actual(self, project, relation_name, expected_grants):
@@ -152,7 +158,7 @@ class TestSeedGrantsImpala(BaseSeedGrants):
             if grant_key not in expected_grants:
                 return False
         return True
-    
+
     def test_seed_grants(self, project, get_test_users):
         test_users = get_test_users
         select_privilege_name = self.privilege_grantee_name_overrides()["select"]
@@ -171,7 +177,7 @@ class TestSeedGrantsImpala(BaseSeedGrants):
         # run it again, with no config changes
         (results, log_output) = run_dbt_and_capture(["--debug", "seed"])
         assert len(results) == 1
-        
+
         # seeds are always full-refreshed on this adapter, so we need to re-grant
         assert "grant " in log_output
         self.assert_expected_grants_match_actual(project, "my_seed", expected)
@@ -226,11 +232,12 @@ class TestSeedGrantsImpala(BaseSeedGrants):
         # assert "grant " not in log_output
         self.assert_expected_grants_match_actual(project, "my_seed", expected)
 
+
 @pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestInvalidGrantsImpala(BaseInvalidGrants):
     def assert_expected_grants_match_actual(self, project, relation_name, expected_grants):
         actual_grants = self.get_grants_on_relation(project, relation_name)
-        
+
         for grant_key in actual_grants:
             if grant_key not in expected_grants:
                 return False

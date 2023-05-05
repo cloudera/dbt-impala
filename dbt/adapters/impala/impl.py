@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import re
 from collections import OrderedDict
-from concurrent.futures import Future, as_completed
-from typing import Any, Dict, Iterable, List, Tuple
+from concurrent.futures import Future
+from typing import Any, Dict, Iterable, List
 
 import agate
 import dbt.exceptions
@@ -35,31 +34,28 @@ from dbt.adapters.impala.relation import ImpalaRelation
 
 logger = AdapterLogger("Impala")
 
-LIST_SCHEMAS_MACRO_NAME = 'list_schemas'
-LIST_RELATIONS_MACRO_NAME = 'list_relations_without_caching'
+LIST_SCHEMAS_MACRO_NAME = "list_schemas"
+LIST_RELATIONS_MACRO_NAME = "list_relations_without_caching"
 
-KEY_TABLE_OWNER = 'Owner'
-KEY_TABLE_STATISTICS = 'Statistics'
+KEY_TABLE_OWNER = "Owner"
+KEY_TABLE_STATISTICS = "Statistics"
+
 
 class ImpalaAdapter(SQLAdapter):
     Relation = ImpalaRelation
     Column = ImpalaColumn
     ConnectionManager = ImpalaConnectionManager
 
-    INFORMATION_COLUMNS_REGEX = re.compile(
-        r"^ \|-- (.*): (.*) \(nullable = (.*)\b", re.MULTILINE)
+    INFORMATION_COLUMNS_REGEX = re.compile(r"^ \|-- (.*): (.*) \(nullable = (.*)\b", re.MULTILINE)
     INFORMATION_OWNER_REGEX = re.compile(r"^Owner: (.*)$", re.MULTILINE)
-    INFORMATION_STATISTICS_REGEX = re.compile(
-        r"^Statistics: (.*)$", re.MULTILINE)
+    INFORMATION_STATISTICS_REGEX = re.compile(r"^Statistics: (.*)$", re.MULTILINE)
 
     @classmethod
     def date_function(cls):
-        return 'now()'
+        return "now()"
 
     @classmethod
-    def convert_datetime_type(
-            cls, agate_table: agate.Table, col_idx: int
-    ) -> str:
+    def convert_datetime_type(cls, agate_table: agate.Table, col_idx: int) -> str:
         return "timestamp"
 
     @classmethod
@@ -75,29 +71,23 @@ class ImpalaAdapter(SQLAdapter):
         return "string"
 
     def quote(self, identifier):
-        return identifier # no quote
+        return identifier  # no quote
 
     @classmethod
     def convert_number_type(cls, agate_table: agate.Table, col_idx: int) -> str:
         decimals = agate_table.aggregate(agate.MaxPrecision(col_idx))  # type: ignore[attr-defined]
         return "real" if decimals else "integer"
-        
+
     def check_schema_exists(self, database, schema):
-        results = self.execute_macro(
-            LIST_SCHEMAS_MACRO_NAME,
-            kwargs={'database': database}
-        )
+        results = self.execute_macro(LIST_SCHEMAS_MACRO_NAME, kwargs={"database": database})
 
         exists = True if schema in [row[0] for row in results] else False
-        
+
         return exists
 
     def list_schemas(self, database: str) -> List[str]:
-        results = self.execute_macro(
-            LIST_SCHEMAS_MACRO_NAME,
-            kwargs={'database': database}
-        )
-        
+        results = self.execute_macro(LIST_SCHEMAS_MACRO_NAME, kwargs={"database": database})
+
         schemas = []
 
         for row in results:
@@ -109,15 +99,12 @@ class ImpalaAdapter(SQLAdapter):
     def list_relations_without_caching(
         self, schema_relation: ImpalaRelation
     ) -> List[ImpalaRelation]:
-        kwargs = {'schema_relation': schema_relation}
+        kwargs = {"schema_relation": schema_relation}
 
         try:
-            results = self.execute_macro(
-                LIST_RELATIONS_MACRO_NAME,
-                kwargs=kwargs
-            )
+            results = self.execute_macro(LIST_RELATIONS_MACRO_NAME, kwargs=kwargs)
         except dbt.exceptions.RuntimeException as e:
-            errmsg = getattr(e, 'msg', '')
+            errmsg = getattr(e, "msg", "")
             if f"Database '{schema_relation}' not found" in errmsg:
                 return []
             else:
@@ -130,13 +117,13 @@ class ImpalaAdapter(SQLAdapter):
             if len(row) != 2:
                 raise dbt.exceptions.RuntimeException(
                     f'Invalid value from "show table extended ...", '
-                    f'got {len(row)} values, expected 4'
+                    f"got {len(row)} values, expected 4"
                 )
             _identifier = row[0]
-            _rel_type   = row[1]
+            _rel_type = row[1]
 
             relation = self.Relation.create(
-                database=None, 
+                database=None,
                 schema=schema_relation.schema,
                 identifier=_identifier,
                 type=_rel_type,
@@ -148,23 +135,31 @@ class ImpalaAdapter(SQLAdapter):
 
     def get_columns_in_relation(self, relation: Relation) -> List[ImpalaColumn]:
         cached_relations = self.cache.get_relations(relation.database, relation.schema)
-        cached_relation = next((cached_relation
-                                for cached_relation in cached_relations
-                                if str(cached_relation) == str(relation)),
-                               None)
+        cached_relation = next(
+            (
+                cached_relation
+                for cached_relation in cached_relations
+                if str(cached_relation) == str(relation)
+            ),
+            None,
+        )
         columns = []
         if cached_relation and cached_relation.information:
             columns = self.parse_columns_from_information(cached_relation)
 
         # execute the macro and parse the data
-        if not columns:       
+        if not columns:
             try:
                 rows: List[agate.Row] = super().get_columns_in_relation(relation)
                 columns = self.parse_describe_extended(relation, rows)
             except dbt.exceptions.RuntimeException as e:
                 # impala would throw error when table doesn't exist
                 errmsg = getattr(e, "msg", "")
-                if "Table or view not found" in errmsg or "NoSuchTableException" in errmsg or "Could not resolve path" in errmsg:
+                if (
+                    "Table or view not found" in errmsg
+                    or "NoSuchTableException" in errmsg
+                    or "Could not resolve path" in errmsg
+                ):
                     return []
                 else:
                     raise e
@@ -172,57 +167,67 @@ class ImpalaAdapter(SQLAdapter):
         return columns
 
     def parse_describe_extended(
-            self,
-            relation: Relation,
-            raw_rows: List[agate.Row]
+        self, relation: Relation, raw_rows: List[agate.Row]
     ) -> List[ImpalaColumn]:
-
         # TODO: this method is largely from dbt-spark, sample test with impala works (test_dbt_base: base)
-        # need deeper testing 
+        # need deeper testing
 
         # Convert the Row to a dict
         dict_rows = [dict(zip(row._keys, row._values)) for row in raw_rows]
         # Find the separator between columns and partitions information
         # by the DESCRIBE EXTENDED {{relation}} statement
-        partition_separator_pos = ImpalaAdapter.find_partition_information_separator(dict_rows)  # ensure that the class method is called
- 
+        partition_separator_pos = ImpalaAdapter.find_partition_information_separator(
+            dict_rows
+        )  # ensure that the class method is called
+
         # Find the separator between the rows and the metadata provided
         # by the DESCRIBE EXTENDED {{relation}} statement
-        table_separator_pos = ImpalaAdapter.find_table_information_separator(dict_rows)  # ensure that the class method is called
+        table_separator_pos = ImpalaAdapter.find_table_information_separator(
+            dict_rows
+        )  # ensure that the class method is called
 
-        column_separator_pos = partition_separator_pos if partition_separator_pos > 0 else table_separator_pos
+        column_separator_pos = (
+            partition_separator_pos if partition_separator_pos > 0 else table_separator_pos
+        )
         # Remove rows that start with a hash, they are comments
         rows = [
-            row for row in raw_rows[0:column_separator_pos]
-            if not row['name'].startswith('#') and not row['name'] == ''
+            row
+            for row in raw_rows[0:column_separator_pos]
+            if not row["name"].startswith("#") and not row["name"] == ""
         ]
         # trim the fields so that these are clean key,value pairs and metadata.get() correctly returns the values
         metadata = {
-            col['name'].split(":")[0].strip(): col['type'].strip() for col in raw_rows[table_separator_pos + 1:]
-            if col['name'] and not col['name'].startswith('#') and not col['name'] == '' and col['type']
+            col["name"].split(":")[0].strip(): col["type"].strip()
+            for col in raw_rows[table_separator_pos + 1 :]
+            if col["name"]
+            and not col["name"].startswith("#")
+            and not col["name"] == ""
+            and col["type"]
         }
 
         raw_table_stats = metadata.get(KEY_TABLE_STATISTICS)
         table_stats = ImpalaColumn.convert_table_stats(raw_table_stats)
 
-        return [ImpalaColumn(
-            table_database=None,
-            table_schema=relation.schema,
-            table_name=relation.name,
-            table_type=relation.type,
-            table_owner=str(metadata.get(KEY_TABLE_OWNER)),
-            table_stats=table_stats,
-            column=column['name'],
-            column_index=idx,
-            dtype=column['type'],
-        ) for idx, column in enumerate(rows)]
+        return [
+            ImpalaColumn(
+                table_database=None,
+                table_schema=relation.schema,
+                table_name=relation.name,
+                table_type=relation.type,
+                table_owner=str(metadata.get(KEY_TABLE_OWNER)),
+                table_stats=table_stats,
+                column=column["name"],
+                column_index=idx,
+                dtype=column["type"],
+            )
+            for idx, column in enumerate(rows)
+        ]
 
     @staticmethod
     def find_partition_information_separator(rows: List[dict]) -> int:
         pos = 0
         for row in rows:
-            if row['name'].startswith('# Partition Transform Information'):
-                found = True
+            if row["name"].startswith("# Partition Transform Information"):
                 break
             pos += 1
         result = 0 if (pos == len(rows)) else pos
@@ -232,26 +237,20 @@ class ImpalaAdapter(SQLAdapter):
     def find_table_information_separator(rows: List[dict]) -> int:
         pos = 0
         for row in rows:
-            if row['name'].startswith('# Detailed Table Information'):
+            if row["name"].startswith("# Detailed Table Information"):
                 break
             pos += 1
         return pos
 
-    def parse_columns_from_information(
-            self, relation: ImpalaRelation
-    ) -> List[ImpalaColumn]:
-
+    def parse_columns_from_information(self, relation: ImpalaRelation) -> List[ImpalaColumn]:
         # TODO: this method is largely from dbt-spark, sample test with impala works (test_dbt_base: base)
         # need deeper testing
 
-        owner_match = re.findall(
-            self.INFORMATION_OWNER_REGEX, relation.information)
+        owner_match = re.findall(self.INFORMATION_OWNER_REGEX, relation.information)
         owner = owner_match[0] if owner_match else None
-        matches = re.finditer(
-            self.INFORMATION_COLUMNS_REGEX, relation.information)
+        matches = re.finditer(self.INFORMATION_COLUMNS_REGEX, relation.information)
         columns = []
-        stats_match = re.findall(
-            self.INFORMATION_STATISTICS_REGEX, relation.information)
+        stats_match = re.findall(self.INFORMATION_STATISTICS_REGEX, relation.information)
         raw_table_stats = stats_match[0] if stats_match else None
         table_stats = ImpalaColumn.convert_table_stats(raw_table_stats)
         for match_num, match in enumerate(matches):
@@ -265,7 +264,7 @@ class ImpalaAdapter(SQLAdapter):
                 table_owner=owner,
                 column=column_name,
                 dtype=column_type,
-                table_stats=table_stats
+                table_stats=table_stats,
             )
             columns.append(column)
 
@@ -274,31 +273,27 @@ class ImpalaAdapter(SQLAdapter):
     def get_catalog(self, manifest):
         schema_map = self._get_catalog_schemas(manifest)
 
-
         with executor(self.config) as tpe:
             futures: List[Future[agate.Table]] = []
             for info, schemas in schema_map.items():
                 for schema in schemas:
-                    futures.append(tpe.submit_connected(
-                            self, schema,
-                            self._get_one_catalog, info, [schema], manifest
-                        ))
-            catalogs, exceptions = catch_as_completed(futures) # call the default implementation 
+                    futures.append(
+                        tpe.submit_connected(
+                            self, schema, self._get_one_catalog, info, [schema], manifest
+                        )
+                    )
+            catalogs, exceptions = catch_as_completed(futures)  # call the default implementation
 
         return catalogs, exceptions
 
-    def _get_one_catalog(
-        self, information_schema, schemas, manifest
-    ) -> agate.Table:
-
+    def _get_one_catalog(self, information_schema, schemas, manifest) -> agate.Table:
         if len(schemas) != 1:
             dbt.exceptions.raise_compiler_error(
-                f'Expected only one schema in ImpalaAdapter._get_one_catalog, found '
-                f'{schemas}'
+                f"Expected only one schema in ImpalaAdapter._get_one_catalog, found " f"{schemas}"
             )
 
         schema = list(schemas)[0]
-        
+
         columns: List[Dict[str, Any]] = []
 
         relation_list = self.list_relations(None, schema)
@@ -307,32 +302,29 @@ class ImpalaAdapter(SQLAdapter):
             columns.extend(self._get_columns_for_catalog(relation))
 
         if len(columns) > 0:
-            text_types = agate_helper.build_type_tester(["table_database", "table_schema", "table_name"])
+            text_types = agate_helper.build_type_tester(
+                ["table_database", "table_schema", "table_name"]
+            )
         else:
             text_types = []
 
-        return agate.Table.from_object(
-            columns,
-            column_types = text_types
-        )
+        return agate.Table.from_object(columns, column_types=text_types)
 
-    def _get_columns_for_catalog(
-        self, relation: ImpalaRelation
-    ) -> Iterable[Dict[str, Any]]:
+    def _get_columns_for_catalog(self, relation: ImpalaRelation) -> Iterable[Dict[str, Any]]:
         columns = self.get_columns_in_relation(relation)
 
         for column in columns:
             # convert ImpalaColumns into catalog dicts
             as_dict = column.to_column_dict()
-            
-            as_dict['column_name'] = as_dict.pop('column', None)
-            as_dict['column_type'] = as_dict.pop('dtype')
-            as_dict['table_database'] = None
+
+            as_dict["column_name"] = as_dict.pop("column", None)
+            as_dict["column_type"] = as_dict.pop("dtype")
+            as_dict["table_database"] = None
 
             yield as_dict
- 
+
     def timestamp_add_sql(self, add_to: str, number: int = 1, interval: str = "hour") -> str:
-        # We override this from base dbt adapter because impala doesn't need to escape interval 
+        # We override this from base dbt adapter because impala doesn't need to escape interval
         # duration string like postgres/redshift.
         return f"{add_to} + interval {number} {interval}"
 
@@ -343,7 +335,7 @@ class ImpalaAdapter(SQLAdapter):
         # query user permissions where available
         try:
             username = self.config.credentials.username
-            if not username: # username is not available when auth_type is insecure or kerberos
+            if not username:  # username is not available when auth_type is insecure or kerberos
                 logger.debug("No username available to fetch permissions")
                 payload = {
                     "event_type": tracker.TrackingEventType.DEBUG,
@@ -368,9 +360,7 @@ class ImpalaAdapter(SQLAdapter):
                 }
                 tracker.track_usage(payload)
         except Exception as ex:
-            logger.error(
-                f"Failed to fetch permissions for user: {username}. Exception: {ex}"
-            )
+            logger.error(f"Failed to fetch permissions for user: {username}. Exception: {ex}")
 
         self.connections.get_thread_connection().handle.close()
 
@@ -412,4 +402,3 @@ class ImpalaAdapter(SQLAdapter):
         Not used to validate custom strategies defined by end users.
         """
         return ["append", "insert_overwrite"]
-        
