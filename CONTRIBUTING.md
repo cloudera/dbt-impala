@@ -3,6 +3,7 @@
 1. [About this document](#about-this-document)
 2. [Getting the code](#getting-the-code)
 3. [Running `dbt-impala` in development](#running-dbt-impala-in-development)
+4. [Testing](#testing)
 4. [Submitting a Pull Request](#submitting-a-pull-request)
 
 ## About this document
@@ -49,6 +50,8 @@ If you are a member of the `Cloudera` GitHub organization, you will have push ac
 
 4. Install `dbt-impala` and development dependencies in the active `virtualenv`. Run `pip install -e . -r dev-requirements.txt`.
 
+5. Add the pre-commit hook. Run `pre-commit install`
+
 When `dbt-impala` is installed this way, any changes you make to the `dbt-impala` source code will be reflected immediately (i.e. in your next local dbt invocation against a Impala target).
 
 ## Testing
@@ -75,6 +78,9 @@ You may run a specific test or group of tests using `pytest` directly. Activate 
 
 ```sh
 # Note: replace $strings with valid names
+
+# run full tests suite against an environment/endpoint
+python -m pytest --profile dwx_endpoint
 
 # run all impala functional tests in a directory
 python -m pytest tests/functional/$test_directory --profile dwx_endpoint
