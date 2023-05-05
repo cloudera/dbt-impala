@@ -19,53 +19,69 @@ from dbt.tests.util import (
     check_result_nodes_by_name,
     relation_from_name,
     check_relation_types,
-    check_relations_equal
+    check_relations_equal,
 )
 
 from tests.functional.adapter.test_basic import (
     TestSimpleMaterializationsImpala,
-    TestIncrementalImpala
+    TestIncrementalImpala,
 )
 
 from dbt.tests.adapter.basic.files import (
     model_base,
     model_incremental,
     base_view_sql,
-    schema_base_yml
+    schema_base_yml,
 )
+
 
 def is_iceberg_table(project, tableName):
     rows = project.run_sql(f"describe formatted {tableName}", fetch="all")
     result = False
     for col_name, data_type, comment in rows:
-        if data_type and data_type.strip() == 'table_type' and comment and comment.strip() == 'ICEBERG':
-            result = True 
+        if (
+            data_type
+            and data_type.strip() == "table_type"
+            and comment
+            and comment.strip() == "ICEBERG"
+        ):
+            result = True
     return result
 
-iceberg_base_table_sql = """
+
+iceberg_base_table_sql = (
+    """
 {{
   config(
     materialized="table",
     table_type="iceberg"
   )
-}}""".strip() + model_base
+}}""".strip()
+    + model_base
+)
 
-iceberg_base_materialized_var_sql = """
-{{ 
+iceberg_base_materialized_var_sql = (
+    """
+{{
   config(
     materialized=var("materialized_var", "table"),
     table_type="iceberg"
   )
-}}""".strip() + model_base
+}}""".strip()
+    + model_base
+)
 
-incremental_iceberg_sql = """
+incremental_iceberg_sql = (
+    """
  {{
     config(
         materialized="incremental",
         table_type="iceberg"
     )
 }}
-""".strip() + model_incremental
+""".strip()
+    + model_incremental
+)
 
 
 incremental_partition_iceberg_sql = """
@@ -111,6 +127,7 @@ select *, id as id_partition1 from {{ source('raw', 'seed') }}
 {% endif %}
 """.strip()
 
+
 # For iceberg table formats, check_relations_equal util is not working as expected
 # Impala upstream issue: https://issues.apache.org/jira/browse/IMPALA-12097
 # Hence removing this check from unit tests
@@ -125,7 +142,6 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
         }
 
     def test_base(self, project):
-
         # seed command
         results = run_dbt(["seed"])
         # seed result length
@@ -148,14 +164,16 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
         }
         check_relation_types(project.adapter, expected)
 
-        assert is_iceberg_table(project, relation_from_name(project.adapter, "table_model")) == True
+        assert (
+            is_iceberg_table(project, relation_from_name(project.adapter, "table_model")) == True
+        )
         assert is_iceberg_table(project, relation_from_name(project.adapter, "swappable")) == True
-        
+
         # base table rowcount
         relation = relation_from_name(project.adapter, "base")
         result = project.run_sql(f"select count(*) as num_rows from {relation}", fetch="one")
         assert result[0] == 10
-        
+
         # Uncomment the below check after IMPALA-12097 gets resolved
         # check_relations_equal(project.adapter, ["base", "view_model", "table_model", "swappable"])
 
@@ -177,7 +195,7 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
             "swappable": "view",
         }
         check_relation_types(project.adapter, expected)
-        
+
         # run_dbt changing materialized_var to incremental
         results = run_dbt(["run", "-m", "swappable", "--vars", "materialized_var: incremental"])
         assert len(results) == 1
@@ -196,7 +214,10 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
 class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
     @pytest.fixture(scope="class")
     def models(self):
-        return {"incremental_test_model.sql": incremental_iceberg_sql, "schema.yml": schema_base_yml}
+        return {
+            "incremental_test_model.sql": incremental_iceberg_sql,
+            "schema.yml": schema_base_yml,
+        }
 
     def test_incremental(self, project):
         # seed command
@@ -217,7 +238,12 @@ class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
         # the "seed_name" var changes the seed identifier in the schema file
         results = run_dbt(["run", "--vars", "seed_name: base"])
         assert len(results) == 1
-        assert is_iceberg_table(project, relation_from_name(project.adapter, "incremental_test_model")) == True
+        assert (
+            is_iceberg_table(
+                project, relation_from_name(project.adapter, "incremental_test_model")
+            )
+            == True
+        )
 
         # Uncomment the below check after IMPALA-12097 gets resolved
         # check_relations_equal(project.adapter, ["base", "incremental_test_model"])
@@ -226,7 +252,12 @@ class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
         # the "seed_name" var changes the seed identifier in the schema file
         results = run_dbt(["run", "--vars", "seed_name: added"])
         assert len(results) == 1
-        assert is_iceberg_table(project, relation_from_name(project.adapter, "incremental_test_model")) == True
+        assert (
+            is_iceberg_table(
+                project, relation_from_name(project.adapter, "incremental_test_model")
+            )
+            == True
+        )
 
         # Uncomment the below check after IMPALA-12097 gets resolved
         # check_relations_equal(project.adapter, ["added", "incremental_test_model"])
@@ -240,14 +271,25 @@ class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
 class TestIncrementalPartitionIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
     @pytest.fixture(scope="class")
     def models(self):
-        return {"incremental_test_model.sql": incremental_partition_iceberg_sql, "schema.yml": schema_base_yml}
+        return {
+            "incremental_test_model.sql": incremental_partition_iceberg_sql,
+            "schema.yml": schema_base_yml,
+        }
+
 
 class TestIncrementalMultiplePartitionIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
     @pytest.fixture(scope="class")
     def models(self):
-        return {"incremental_test_model.sql": incremental_multiple_partition_iceberg_sql, "schema.yml": schema_base_yml}
+        return {
+            "incremental_test_model.sql": incremental_multiple_partition_iceberg_sql,
+            "schema.yml": schema_base_yml,
+        }
+
 
 class TestInsertoverwriteIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
     @pytest.fixture(scope="class")
     def models(self):
-        return {"incremental_test_model.sql": insertoverwrite_iceberg_sql, "schema.yml": schema_base_yml}
+        return {
+            "incremental_test_model.sql": insertoverwrite_iceberg_sql,
+            "schema.yml": schema_base_yml,
+        }

@@ -49,6 +49,7 @@ DEFAULT_MAX_RETRIES = 3
 
 logger = AdapterLogger("Impala")
 
+
 @dataclass
 class ImpalaCredentials(Credentials):
     host: str = DEFAULT_IMPALA_HOST
@@ -108,7 +109,8 @@ class ImpalaCredentials(Credentials):
         # adapter anonymous adoption
         return self.host
 
-class ImpalaConnectionWrapper(object):
+
+class ImpalaConnectionWrapper:
     def __init__(self, handle):
         self.handle = handle
         self._cursor = self.handle.cursor()
@@ -122,16 +124,16 @@ class ImpalaConnectionWrapper(object):
         if self._cursor:
             try:
                 self._cursor.cancel()
-            except EnvironmentError as exc:
-                logger.debug("Exception while cancelling query: {}".format(exc))
+            except OSError as exc:
+                logger.debug(f"Exception while cancelling query: {exc}")
 
     def close(self):
         if self._cursor:
             try:
                 self._cursor.close()
                 self._cursor = None
-            except EnvironmentError as exc:
-                logger.debug("Exception while closing cursor: {}".format(exc))
+            except OSError as exc:
+                logger.debug(f"Exception while closing cursor: {exc}")
 
     def rollback(self, *args, **kwargs):
         logger.debug("NotImplemented: rollback")
@@ -150,6 +152,7 @@ class ImpalaConnectionWrapper(object):
     def description(self):
         return self._cursor.description
 
+
 class ImpalaConnectionManager(SQLConnectionManager):
     TYPE = "impala"
 
@@ -165,16 +168,20 @@ class ImpalaConnectionManager(SQLConnectionManager):
         try:
             yield
         except HttpError as httpError:
-            logger.debug("Authorization error: {}".format(httpError))
-            raise dbt.exceptions.RuntimeException ("HTTP Authorization error: " + str(httpError) + ", please check your credentials")
+            logger.debug(f"Authorization error: {httpError}")
+            raise dbt.exceptions.RuntimeException(
+                "HTTP Authorization error: " + str(httpError) + ", please check your credentials"
+            )
         except HiveServer2Error as servError:
-            logger.debug("Server connection error: {}".format(servError))
-            raise dbt.exceptions.RuntimeException ("Unable to establish connection to Impala server: " + str(servError))
+            logger.debug(f"Server connection error: {servError}")
+            raise dbt.exceptions.RuntimeException(
+                "Unable to establish connection to Impala server: " + str(servError)
+            )
         except DatabaseError as dbError:
-            logger.debug("Database connection error: {}".format(str(dbError)))
+            logger.debug(f"Database connection error: {str(dbError)}")
             raise dbt.exceptions.DatabaseException("Database Connection error: " + str(dbError))
         except Exception as exc:
-            logger.debug("Error running SQL: {}".format(sql))
+            logger.debug(f"Error running SQL: {sql}")
             raise dbt.exceptions.RuntimeException(str(exc))
 
     @classmethod
@@ -192,10 +199,10 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection_start_time = time.time()
             # the underlying dbapi supports retries, so this is directly used instead to support retries
             if (
-                    credentials.auth_type == "LDAP" or credentials.auth_type == "ldap"
+                credentials.auth_type == "LDAP" or credentials.auth_type == "ldap"
             ):  # ldap connection
-                custom_user_agent = 'dbt/cloudera-impala-v' + ADAPTER_VERSION
-                logger.debug("Using user agent: {}".format(custom_user_agent))
+                custom_user_agent = "dbt/cloudera-impala-v" + ADAPTER_VERSION
+                logger.debug(f"Using user agent: {custom_user_agent}")
                 handle = impala.dbapi.connect(
                     host=credentials.host,
                     port=credentials.port,
@@ -206,13 +213,13 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     use_ssl=credentials.use_ssl,
                     http_path=credentials.http_path,
                     retries=credentials.retries,
-                    user_agent=custom_user_agent
+                    user_agent=custom_user_agent,
                 )
                 auth_type = "ldap"
             elif (
-                    credentials.auth_type == "GSSAPI"
-                    or credentials.auth_type == "gssapi"
-                    or credentials.auth_type == "kerberos"
+                credentials.auth_type == "GSSAPI"
+                or credentials.auth_type == "gssapi"
+                or credentials.auth_type == "kerberos"
             ):  # kerberos based connection
                 handle = impala.dbapi.connect(
                     host=credentials.host,
@@ -225,8 +232,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
                 )
                 auth_type = "kerberos"
             elif (
-                    credentials.auth_type == "PLAIN"
-                    or credentials.auth_type == "plain"
+                credentials.auth_type == "PLAIN" or credentials.auth_type == "plain"
             ):  # plain type connection
                 handle = impala.dbapi.connect(
                     host=credentials.host,
@@ -251,7 +257,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             ImpalaConnectionManager.fetch_impala_version(connection.handle)
         except Exception as ex:
-            logger.debug("Connection error {}".format(ex))
+            logger.debug(f"Connection error {ex}")
             connection_ex = ex
             connection.state = ConnectionState.FAIL
             connection.handle = None
@@ -262,13 +268,11 @@ class ImpalaConnectionManager(SQLConnectionManager):
             "event_type": tracker.TrackingEventType.OPEN,
             "auth": auth_type,
             "connection_state": connection.state,
-            "elapsed_time": "{:.2f}".format(
-                connection_end_time - connection_start_time
-            ),
+            "elapsed_time": f"{connection_end_time - connection_start_time:.2f}",
         }
 
         if connection.state == ConnectionState.FAIL:
-            payload["connection_exception"] = "{}".format(connection_ex)
+            payload["connection_exception"] = f"{connection_ex}"
 
         tracker.track_usage(payload)
 
@@ -301,8 +305,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
     @classmethod
     def fetch_impala_version(cls, connection):
-
-        if ImpalaConnectionManager.impala_version: 
+        if ImpalaConnectionManager.impala_version:
             return ImpalaConnectionManager.impala_version
 
         try:
@@ -314,13 +317,17 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             ImpalaConnectionManager.impala_version = res[0][0].split("RELEASE")[0].strip()
 
-            tracker.populate_warehouse_info({ "version": ImpalaConnectionManager.impala_version, "build": res[0][0] })
+            tracker.populate_warehouse_info(
+                {"version": ImpalaConnectionManager.impala_version, "build": res[0][0]}
+            )
         except Exception as ex:
             # we couldn't get the impala warehouse version
             logger.debug(f"Cannot get impala version. Error: {ex}")
             ImpalaConnectionManager.impala_version = "NA"
 
-            tracker.populate_warehouse_info({ "version": ImpalaConnectionManager.impala_version, "build": "NA" })
+            tracker.populate_warehouse_info(
+                {"version": ImpalaConnectionManager.impala_version, "build": "NA"}
+            )
 
         logger.debug(f"IMPALA VERSION {'ImpalaConnectionManager.impala_version'}")
 
@@ -345,11 +352,11 @@ class ImpalaConnectionManager(SQLConnectionManager):
         logger.debug("NotImplemented: rollback")
 
     def add_query(
-            self,
-            sql: str,
-            auto_begin: bool = True,
-            bindings: Optional[Any] = None,
-            abridge_sql_log: bool = False,
+        self,
+        sql: str,
+        auto_begin: bool = True,
+        bindings: Optional[Any] = None,
+        abridge_sql_log: bool = False,
     ) -> Tuple[Connection, Any]:
         connection = self.get_thread_connection()
         if auto_begin and connection.transaction_open is False:
@@ -366,7 +373,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
         with self.exception_handler(sql):
             if abridge_sql_log:
-                log_sql = "{}...".format(sql[:512])
+                log_sql = f"{sql[:512]}..."
             else:
                 log_sql = sql
 
@@ -374,7 +381,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             payload = {
                 "event_type": tracker.TrackingEventType.START_QUERY,
                 "sql": log_sql,
-                "profile_name": self.profile.profile_name
+                "profile_name": self.profile.profile_name,
             }
 
             for key, value in additional_info.items():
@@ -407,15 +414,15 @@ class ImpalaConnectionManager(SQLConnectionManager):
             payload = {
                 "event_type": tracker.TrackingEventType.END_QUERY,
                 "sql": log_sql,
-                "elapsed_time": "{:.2f}".format(elapsed_time),
+                "elapsed_time": f"{elapsed_time:.2f}",
                 "status": query_status,
-                "profile_name": self.profile.profile_name
+                "profile_name": self.profile.profile_name,
             }
 
             tracker.track_usage(payload)
 
             # re-raise query exception so that it propogates to dbt
-            if (query_exception):
+            if query_exception:
                 raise query_exception
 
             fire_event(

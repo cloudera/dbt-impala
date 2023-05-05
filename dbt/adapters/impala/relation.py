@@ -19,11 +19,13 @@ from dbt.exceptions import RuntimeException
 
 import dbt.adapters.impala.cloudera_tracking as tracker
 
+
 @dataclass
 class ImpalaQuotePolicy(Policy):
     database: bool = False
     schema: bool = False
     identifier: bool = False
+
 
 @dataclass
 class ImpalaIncludePolicy(Policy):
@@ -40,32 +42,36 @@ class ImpalaRelation(BaseRelation):
     information: str = None
 
     def __post_init__(self):
-        if (self.type):
-            tracker.track_usage({
-                "event_type": tracker.TrackingEventType.MODEL_ACCESS,
-                "model_name": self.render(),
-                "model_type": self.type,
-                "incremental_strategy": ""
-            })
-    
+        if self.type:
+            tracker.track_usage(
+                {
+                    "event_type": tracker.TrackingEventType.MODEL_ACCESS,
+                    "model_name": self.render(),
+                    "model_type": self.type,
+                    "incremental_strategy": "",
+                }
+            )
+
     def render(self):
         return super().render()
 
     def log_relation(self, incremental_strategy):
-        if (self.type):
-            tracker.track_usage({
-                "event_type": tracker.TrackingEventType.INCREMENTAL,
-                "model_name": self.render(),
-                "model_type": self.type,
-                "incremental_strategy": incremental_strategy
-            })
+        if self.type:
+            tracker.track_usage(
+                {
+                    "event_type": tracker.TrackingEventType.INCREMENTAL,
+                    "model_name": self.render(),
+                    "model_type": self.type,
+                    "incremental_strategy": incremental_strategy,
+                }
+            )
 
     def new_copy(self, name, identifier):
         new_relation = ImpalaRelation.create(
-                database=None, # since include policy of database is False, this should be None
-                schema=name,
-                identifier=identifier,
-                information=identifier,
-            )
+            database=None,  # since include policy of database is False, this should be None
+            schema=name,
+            identifier=identifier,
+            information=identifier,
+        )
 
         return new_relation

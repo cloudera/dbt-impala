@@ -21,7 +21,10 @@ from dbt.tests.adapter.basic.test_singular_tests import BaseSingularTests
 from dbt.tests.adapter.basic.test_singular_tests_ephemeral import BaseSingularTestsEphemeral
 from dbt.tests.adapter.basic.test_empty import BaseEmpty
 from dbt.tests.adapter.basic.test_ephemeral import BaseEphemeral
-from dbt.tests.adapter.basic.test_incremental import BaseIncremental, BaseIncrementalNotSchemaChange
+from dbt.tests.adapter.basic.test_incremental import (
+    BaseIncremental,
+    BaseIncrementalNotSchemaChange,
+)
 from dbt.tests.adapter.basic.test_generic_tests import BaseGenericTests
 from dbt.tests.adapter.basic.test_snapshot_check_cols import BaseSnapshotCheckCols
 from dbt.tests.adapter.basic.test_snapshot_timestamp import BaseSnapshotTimestamp
@@ -59,7 +62,7 @@ class TestIncrementalImpala(BaseIncremental):
     @pytest.fixture(scope="class")
     def project_config_update(self):
         return {"name": "incremental_test_model"}
-    
+
     @pytest.fixture(scope="class")
     def models(self):
         return {"incremental_test_model.sql": incremental_sql, "schema.yml": schema_base_yml}
@@ -100,6 +103,7 @@ class TestIncrementalImpala(BaseIncremental):
         assert len(catalog.nodes) == 3
         assert len(catalog.sources) == 1
 
+
 insertoverwrite_sql = """
  {{ config(materialized="incremental", incremental_strategy="insert_overwrite", partition_by="id_partition") }}
  select *, id as id_partition from {{ source('raw', 'seed') }}
@@ -108,10 +112,12 @@ insertoverwrite_sql = """
  {% endif %}
 """.strip()
 
+
 class TestInsertoverwriteImpala(TestIncrementalImpala):
-   @pytest.fixture(scope="class")
-   def models(self):
+    @pytest.fixture(scope="class")
+    def models(self):
         return {"incremental_test_model.sql": insertoverwrite_sql, "schema.yml": schema_base_yml}
+
 
 incremental_single_partitionby_sql = """
  {{ config(materialized="incremental", partition_by="id_partition") }}
@@ -121,10 +127,15 @@ incremental_single_partitionby_sql = """
  {% endif %}
 """.strip()
 
+
 class TestIncrementalWithSinglePartitionKeyImpala(TestIncrementalImpala):
-   @pytest.fixture(scope="class")
-   def models(self):
-        return {"incremental_test_model.sql": incremental_single_partitionby_sql, "schema.yml": schema_base_yml}
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "incremental_test_model.sql": incremental_single_partitionby_sql,
+            "schema.yml": schema_base_yml,
+        }
+
 
 incremental_multiple_partitionby_sql = """
  {{ config(materialized="incremental", partition_by=["id_partition1", "id_partition2"]) }}
@@ -134,28 +145,37 @@ incremental_multiple_partitionby_sql = """
  {% endif %}
 """.strip()
 
+
 class TestIncrementalWithMultiplePartitionKeyImpala(TestIncrementalImpala):
-   @pytest.fixture(scope="class")
-   def models(self):
-        return {"incremental_test_model.sql": incremental_multiple_partitionby_sql, "schema.yml": schema_base_yml}
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "incremental_test_model.sql": incremental_multiple_partitionby_sql,
+            "schema.yml": schema_base_yml,
+        }
 
 
 class TestGenericTestsImpala(BaseGenericTests):
     pass
 
+
 @pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestSnapshotCheckColsImpala(BaseSnapshotCheckCols):
     pass
+
 
 @pytest.mark.skip(reason="Not working from the start ie v1.3.3")
 class TestSnapshotTimestampImpala(BaseSnapshotTimestamp):
     pass
 
+
 class TestBaseAdapterMethod(BaseAdapterMethod):
     pass
 
+
 class TestBaseUtilsImpala(BaseUtils):
-     pass
+    pass
+
 
 incremental_not_schema_change_sql = """
 {{ config(materialized="incremental", incremental_strategy="append") }}
@@ -168,8 +188,8 @@ select
     {% endif %}
 """
 
+
 class TestBaseIncrementalNotSchemaChange(BaseIncrementalNotSchemaChange):
     @pytest.fixture(scope="class")
     def models(self):
         return {"incremental_not_schema_change.sql": incremental_not_schema_change_sql}
-

@@ -93,7 +93,7 @@ python -m pytest --profile dwx_endpoint tests/functional/$test_dir_and_filename.
 python -m pytest --profile dwx_endpoint tests/functional/adapter/test_basic.py::TestSimpleMaterializationsImpala::test_base
 ```
 
-To configure the pytest setting, update pytest.ini. By default, all the tests run logs are captured in `logs/<test-run>/dbt.log` 
+To configure the pytest setting, update pytest.ini. By default, all the tests run logs are captured in `logs/<test-run>/dbt.log`
 
 ## Submitting a Pull Request
 

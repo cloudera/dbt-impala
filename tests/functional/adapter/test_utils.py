@@ -152,6 +152,8 @@ select
 
 from util_data
 """
+
+
 class TestConcat(BaseConcat):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -169,6 +171,7 @@ models__test_escape_single_quotes_quote_sql = """
 select '{{ escape_single_quotes("they're") }}' as actual, 'they\\'re' as expected union all
 select '{{ escape_single_quotes("they are") }}' as actual, 'they are' as expected
 """
+
 
 class TestEscapeSingleQuotes(BaseEscapeSingleQuotesQuote):
     @pytest.fixture(scope="class")
@@ -199,6 +202,8 @@ select
 
 from util_data
 """
+
+
 class TestLength(BaseLength):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -226,6 +231,8 @@ select
 
 from util_data
 """
+
+
 class TestPosition(BasePosition):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -239,6 +246,7 @@ class TestPosition(BasePosition):
                 models__test_position_sql, "position"
             ),
         }
+
 
 models__test_replace_sql = """
 with util_data as (
@@ -260,6 +268,8 @@ select
 
 from util_data
 """
+
+
 class TestReplace(BaseReplace):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -273,6 +283,7 @@ class TestReplace(BaseReplace):
                 models__test_replace_sql, "replace"
             ),
         }
+
 
 models__test_right_sql = """
 with util_data as (
@@ -288,6 +299,8 @@ select
 
 from util_data
 """
+
+
 class TestRight(BaseRight):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -314,6 +327,8 @@ select
 
 from util_data
 """
+
+
 class TestSafeCast(BaseSafeCast):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -328,6 +343,7 @@ class TestSafeCast(BaseSafeCast):
                 "type_string",
             ),
         }
+
 
 models__test_split_part_sql = """
 with util_data as (
@@ -358,6 +374,8 @@ select
 
 from util_data
 """
+
+
 class TestSplitPart(BaseSplitPart):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -375,6 +393,7 @@ class TestSplitPart(BaseSplitPart):
 
 class TestStringLiteral(BaseStringLiteral):
     pass
+
 
 models__test_hash_sql = """
 with util_data as (
@@ -395,6 +414,8 @@ a,1C9DA4DB639FDDAC
 1,1C9DF4DB63A0659C
 ,811C9DC5
 """
+
+
 class TestHash(BaseHash):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -406,6 +427,7 @@ class TestHash(BaseHash):
             "test_hash.yml": models__test_hash_yml,
             "test_hash.sql": self.interpolate_macro_namespace(models__test_hash_sql, "hash"),
         }
+
 
 # in impala cast of boolean to string return 1 or 0
 # (c.f. https://impala.apache.org/docs/build/html/topics/impala_boolean.html#boolean)
@@ -425,6 +447,7 @@ select
 
 from util_data
 """
+
 
 class TestCastBoolToText(BaseCastBoolToText):
     @pytest.fixture(scope="class")
@@ -468,6 +491,7 @@ left join data_output
 on calculate.key_column = data_output.key_column
 """
 
+
 class TestBoolOr(BaseBoolOr):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -484,6 +508,7 @@ class TestBoolOr(BaseBoolOr):
                 models__test_bool_or_sql, "bool_or"
             ),
         }
+
 
 models__test_any_value_sql = """
 with util_data as (
@@ -516,6 +541,7 @@ on calculate.key_name = data_output.key_name
 and calculate.static_col = data_output.static_col
 """
 
+
 class TestAnyValue(BaseAnyValue):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -532,6 +558,7 @@ class TestAnyValue(BaseAnyValue):
                 models__test_any_value_sql, "any_value"
             ),
         }
+
 
 models__test_dateadd_sql = """
 with util_data as (
@@ -552,6 +579,7 @@ select
 
 from util_data
 """
+
 
 class TestDateAdd(BaseDateAdd):
     @pytest.fixture(scope="class")
@@ -582,6 +610,7 @@ class TestDateAdd(BaseDateAdd):
                 models__test_dateadd_sql, "dateadd"
             ),
         }
+
 
 models__test_datediff_sql = """
 with util_data as (
@@ -620,6 +649,7 @@ union all select {{ datediff("'1999-12-31 23:59:59.999999'", "'2000-01-01 00:00:
 union all select {{ datediff("'1999-12-31 23:59:59.999999'", "'2000-01-01 00:00:00.000000'", "year") }} as actual, 1 as expected
 """
 
+
 class TestDateDiff(BaseDateDiff):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -633,6 +663,7 @@ class TestDateDiff(BaseDateDiff):
                 models__test_datediff_sql, "datediff"
             ),
         }
+
 
 models__test_date_trunc_sql = """
 with util_data as (
@@ -655,6 +686,8 @@ select
 
 from util_data
 """
+
+
 class TestDateTrunc(BaseDateTrunc):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -668,6 +701,7 @@ class TestDateTrunc(BaseDateTrunc):
                 models__test_date_trunc_sql, "date_trunc"
             ),
         }
+
 
 models__test_last_day_sql = """
 with util_data as (
@@ -687,6 +721,8 @@ select
 
 from util_data
 """
+
+
 class TestLastDay(BaseLastDay):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -700,6 +736,7 @@ class TestLastDay(BaseLastDay):
                 models__test_last_day_sql, "last_day"
             ),
         }
+
 
 models__test_listagg_sql = """
 with util_data as (
@@ -782,6 +819,8 @@ seeds__data_listagg_output_csv = """group_col,expected,version
 3,"g",distinct_comma
 3,"g,g,g",no_params
 """
+
+
 class TestListagg(BaseListagg):
     @pytest.fixture(scope="class")
     def seeds(self):
@@ -799,8 +838,10 @@ class TestListagg(BaseListagg):
             ),
         }
 
+
 class TestIntersect(BaseIntersect):
     pass
+
 
 class TestCurrentTimestamp(BaseCurrentTimestampNaive):
     pass

@@ -30,7 +30,7 @@
 
         {% if raw_strategy == 'insert_overwrite' %}
 
-            insert overwrite {{ target }} partition({{ partition_cols_csv }}) 
+            insert overwrite {{ target }} partition({{ partition_cols_csv }})
             (
                 select {{ dest_cols_csv }}
                 from {{ source }}
@@ -55,4 +55,3 @@
     {% endif %}
 
 {%- endmacro %}
-

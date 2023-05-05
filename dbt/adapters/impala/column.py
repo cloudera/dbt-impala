@@ -19,7 +19,7 @@ from dbt.adapters.base.column import Column
 from dbt.dataclass_schema import dbtClassMixin
 from hologram import JsonDict
 
-Self = TypeVar('Self', bound='ImpalaColumn')
+Self = TypeVar("Self", bound="ImpalaColumn")
 
 
 @dataclass
@@ -41,18 +41,18 @@ class ImpalaColumn(dbtClassMixin, Column):
         return self.is_string() and other_column.is_string()
 
     def literal(self, value):
-        return "cast({} as {})".format(value, self.dtype)
+        return f"cast({value} as {self.dtype})"
 
     @property
     def quoted(self) -> str:
-        return '"{}"'.format(self.column)
+        return f'"{self.column}"'
 
     @property
     def data_type(self) -> str:
         return self.dtype
 
     def __repr__(self) -> str:
-        return "<ImpalaColumn {} ({})>".format(self.name, self.data_type)
+        return f"<ImpalaColumn {self.name} ({self.data_type})>"
 
     @staticmethod
     def convert_table_stats(raw_stats: Optional[str]) -> Dict[str, Any]:
@@ -60,23 +60,20 @@ class ImpalaColumn(dbtClassMixin, Column):
         if raw_stats:
             # format: 1109049927 bytes, 14093476 rows
             stats = {
-                stats.split(" ")[1]: int(stats.split(" ")[0])
-                for stats in raw_stats.split(', ')
+                stats.split(" ")[1]: int(stats.split(" ")[0]) for stats in raw_stats.split(", ")
             }
             for key, val in stats.items():
-                table_stats[f'stats:{key}:label'] = key
-                table_stats[f'stats:{key}:value'] = val
-                table_stats[f'stats:{key}:description'] = ''
-                table_stats[f'stats:{key}:include'] = True
+                table_stats[f"stats:{key}:label"] = key
+                table_stats[f"stats:{key}:value"] = val
+                table_stats[f"stats:{key}:description"] = ""
+                table_stats[f"stats:{key}:include"] = True
         return table_stats
 
-    def to_column_dict(
-            self, omit_none: bool = True, validate: bool = False
-    ) -> JsonDict:
+    def to_column_dict(self, omit_none: bool = True, validate: bool = False) -> JsonDict:
         original_dict = self.to_dict(omit_none=omit_none)
-       
+
         # If there are stats, merge them into the root of the dict
-        original_stats = original_dict.pop('table_stats', None)
+        original_stats = original_dict.pop("table_stats", None)
         if original_stats:
             original_dict.update(original_stats)
         return original_dict
