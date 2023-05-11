@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.3.4 (May 5nd, 2023)
+## 1.3.2 (May 10th, 2023)
 Added support for iceberg table format
 Added support for plain authorization connection
 Added support for Python 3.7
