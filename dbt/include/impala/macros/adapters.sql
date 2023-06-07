@@ -171,7 +171,6 @@
     {{ ct_option_tbl_properties(label="tblproperties") }}
   as
     {{ sql }}
-  ;
 {%- endmacro %}
 
 {% macro impala__create_view_as(relation, sql) -%}
@@ -186,7 +185,6 @@
     {{ ct_option_comment_relation(label="comment") }}
   as
     {{ sql }}
-  ;
 {%- endmacro %}
 
 {% macro impala__create_schema(relation) -%}
@@ -257,7 +255,7 @@
     drop table if exists {{ to_relation }}
   {% endcall %}
   {% call statement('drop_relation_if_exists_view') %}
-    drop view if exists {{ to_relation }};
+    drop view if exists {{ to_relation }}
   {% endcall %}
   {% call statement('rename_relation') -%}
     {% if not from_rel_type %}
