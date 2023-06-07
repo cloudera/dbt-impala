@@ -24,7 +24,6 @@ from dbt.adapters.sql import SQLAdapter
 from dbt.clients import agate_helper
 from dbt.clients.agate_helper import ColumnTypeBuilder, NullableAgateType, _NullMarker
 from dbt.events import AdapterLogger
-from dbt.exceptions import warn_or_error
 from dbt.utils import executor
 
 import dbt.adapters.impala.cloudera_tracking as tracker
@@ -103,7 +102,7 @@ class ImpalaAdapter(SQLAdapter):
 
         try:
             results = self.execute_macro(LIST_RELATIONS_MACRO_NAME, kwargs=kwargs)
-        except dbt.exceptions.RuntimeException as e:
+        except dbt.exceptions.DbtRuntimeError as e:
             errmsg = getattr(e, "msg", "")
             if f"Database '{schema_relation}' not found" in errmsg:
                 return []
@@ -115,7 +114,7 @@ class ImpalaAdapter(SQLAdapter):
         relations = []
         for row in results:
             if len(row) != 2:
-                raise dbt.exceptions.RuntimeException(
+                raise dbt.exceptions.DbtRuntimeError(
                     f'Invalid value from "show table extended ...", '
                     f"got {len(row)} values, expected 4"
                 )
@@ -152,7 +151,7 @@ class ImpalaAdapter(SQLAdapter):
             try:
                 rows: List[agate.Row] = super().get_columns_in_relation(relation)
                 columns = self.parse_describe_extended(relation, rows)
-            except dbt.exceptions.RuntimeException as e:
+            except dbt.exceptions.DbtRuntimeError as e:
                 # impala would throw error when table doesn't exist
                 errmsg = getattr(e, "msg", "")
                 if (
