@@ -14,24 +14,20 @@
 
 import pytest
 
-from dbt.tests.util import (
-    run_dbt,
-    check_result_nodes_by_name,
-    relation_from_name,
-    check_relation_types,
-    check_relations_equal,
-)
-
-from tests.functional.adapter.test_basic import (
-    TestSimpleMaterializationsImpala,
-    TestIncrementalImpala,
-)
-
 from dbt.tests.adapter.basic.files import (
     model_base,
     model_incremental,
     base_view_sql,
     schema_base_yml,
+)
+from dbt.tests.adapter.basic.test_base import BaseSimpleMaterializations
+from dbt.tests.adapter.basic.test_incremental import BaseIncremental
+
+from dbt.tests.util import (
+    run_dbt,
+    check_result_nodes_by_name,
+    relation_from_name,
+    check_relation_types,
 )
 
 
@@ -60,6 +56,18 @@ iceberg_base_table_sql = (
     + model_base
 )
 
+iceberg_base_v2_table_sql = (
+    """
+{{
+  config(
+    materialized="table",
+    table_type="iceberg",
+    tbl_properties="('format-version'='2')",
+  )
+}}""".strip()
+    + model_base
+)
+
 iceberg_base_materialized_var_sql = (
     """
 {{
@@ -73,10 +81,23 @@ iceberg_base_materialized_var_sql = (
 
 incremental_iceberg_sql = (
     """
- {{
+{{
     config(
         materialized="incremental",
         table_type="iceberg"
+    )
+}}
+""".strip()
+    + model_incremental
+)
+
+incremental_iceberg_v2_sql = (
+    """
+{{
+    config(
+        materialized="incremental",
+        table_type="iceberg",
+        tbl_properties="('format-version'='2')",
     )
 }}
 """.strip()
@@ -103,7 +124,22 @@ incremental_multiple_partition_iceberg_sql = """
     config(
         materialized="incremental",
         partition_by=["id_partition1", "id_partition2"],
-        table_type="iceberg"
+        table_type="iceberg",
+    )
+}}
+select *, id as id_partition1, id as id_partition2 from {{ source('raw', 'seed') }}
+{% if is_incremental() %}
+    where id > (select max(id) from {{ this }})
+{% endif %}
+""".strip()
+
+incremental_multiple_partition_iceberg_v2_sql = """
+ {{
+    config(
+        materialized="incremental",
+        partition_by=["id_partition1", "id_partition2"],
+        table_type="iceberg",
+        tbl_properties="('format-version'='2')",
     )
 }}
 select *, id as id_partition1, id as id_partition2 from {{ source('raw', 'seed') }}
@@ -128,10 +164,27 @@ select *, id as id_partition1 from {{ source('raw', 'seed') }}
 """.strip()
 
 
+insertoverwrite_iceberg_v2_sql = """
+ {{
+    config(
+        materialized="incremental",
+        incremental_strategy="insert_overwrite",
+        partition_by="id_partition1",
+        table_type="iceberg",
+        tbl_properties="('format-version'='2')",
+    )
+}}
+select *, id as id_partition1 from {{ source('raw', 'seed') }}
+{% if is_incremental() %}
+    where id > (select max(id) from {{ this }})
+{% endif %}
+""".strip()
+
+
 # For iceberg table formats, check_relations_equal util is not working as expected
 # Impala upstream issue: https://issues.apache.org/jira/browse/IMPALA-12097
 # Hence removing this check from unit tests
-class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsImpala):
+class TestSimpleMaterializationsIcebergImpala(BaseSimpleMaterializations):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -211,7 +264,18 @@ class TestSimpleMaterializationsIcebergFormatImpala(TestSimpleMaterializationsIm
         check_relation_types(project.adapter, expected)
 
 
-class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
+class TestSimpleMaterializationsIcebergV2Impala(TestSimpleMaterializationsIcebergImpala):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "view_model.sql": base_view_sql,
+            "table_model.sql": iceberg_base_v2_table_sql,
+            "swappable.sql": iceberg_base_materialized_var_sql,
+            "schema.yml": schema_base_yml,
+        }
+
+
+class TestIncrementalIcebergImpala(BaseIncremental):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -268,7 +332,16 @@ class TestIncrementalIcebergFormatImpala(TestIncrementalImpala):
         assert len(catalog.sources) == 1
 
 
-class TestIncrementalPartitionIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
+class TestIncrementalIcebergV2Impala(TestIncrementalIcebergImpala):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "incremental_test_model.sql": incremental_iceberg_v2_sql,
+            "schema.yml": schema_base_yml,
+        }
+
+
+class TestIncrementalPartitionIcebergImpala(TestIncrementalIcebergImpala):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -277,7 +350,7 @@ class TestIncrementalPartitionIcebergFormatImpala(TestIncrementalIcebergFormatIm
         }
 
 
-class TestIncrementalMultiplePartitionIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
+class TestIncrementalMultiplePartitionIcebergImpala(TestIncrementalIcebergImpala):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -286,10 +359,28 @@ class TestIncrementalMultiplePartitionIcebergFormatImpala(TestIncrementalIceberg
         }
 
 
-class TestInsertoverwriteIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
+class TestIncrementalMultiplePartitionIcebergV2Impala(TestIncrementalIcebergImpala):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "incremental_test_model.sql": incremental_multiple_partition_iceberg_v2_sql,
+            "schema.yml": schema_base_yml,
+        }
+
+
+class TestInsertoverwriteIcebergImpala(TestIncrementalIcebergImpala):
     @pytest.fixture(scope="class")
     def models(self):
         return {
             "incremental_test_model.sql": insertoverwrite_iceberg_sql,
+            "schema.yml": schema_base_yml,
+        }
+
+
+class TestInsertoverwriteIcebergV2Impala(TestIncrementalIcebergImpala):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "incremental_test_model.sql": insertoverwrite_iceberg_v2_sql,
             "schema.yml": schema_base_yml,
         }
