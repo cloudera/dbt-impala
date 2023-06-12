@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from dbt.adapters.base.relation import BaseRelation, Policy
-from dbt.exceptions import RuntimeException
 
 import dbt.adapters.impala.cloudera_tracking as tracker
 
@@ -36,8 +35,8 @@ class ImpalaIncludePolicy(Policy):
 
 @dataclass(frozen=True, eq=False, repr=False)
 class ImpalaRelation(BaseRelation):
-    quote_policy: ImpalaQuotePolicy = ImpalaQuotePolicy()
-    include_policy: ImpalaIncludePolicy = ImpalaIncludePolicy()
+    quote_policy: ImpalaQuotePolicy = field(default_factory=lambda: ImpalaQuotePolicy())
+    include_policy: ImpalaIncludePolicy = field(default_factory=lambda: ImpalaIncludePolicy())
     quote_character: str = None
     information: str = None
 
