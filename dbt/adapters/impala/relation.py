@@ -13,11 +13,17 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 from dbt.adapters.base.relation import BaseRelation, Policy
 
 import dbt.adapters.impala.cloudera_tracking as tracker
 
+from dbt.contracts.relation import (
+    RelationType
+)
+
+GET_RELATION_TYPE_MACRO_NAME = "get_relation_type"
 
 @dataclass
 class ImpalaQuotePolicy(Policy):
@@ -39,6 +45,7 @@ class ImpalaRelation(BaseRelation):
     include_policy: ImpalaIncludePolicy = field(default_factory=lambda: ImpalaIncludePolicy())
     quote_character: str = None
     information: str = None
+    adapter: str = None
 
     def __post_init__(self):
         if self.type:
@@ -50,6 +57,23 @@ class ImpalaRelation(BaseRelation):
                     "incremental_strategy": "",
                 }
             )
+
+    def __getattribute__(self, name):
+        if name == 'type':
+            type_info = object.__getattribute__(self, name)
+            if type_info:
+                return type_info
+            elif self.adapter:
+                result = self.adapter.execute_macro(GET_RELATION_TYPE_MACRO_NAME, 
+                     kwargs= {"relation": ImpalaRelation.create(
+                        database=self.database, 
+                        schema=self.schema,
+                        identifier=self.identifier,
+                        information=self.identifier,
+                    )})
+                return result
+            return None
+        return object.__getattribute__(self, name)
 
     def render(self):
         return super().render()
@@ -64,6 +88,28 @@ class ImpalaRelation(BaseRelation):
                     "incremental_strategy": incremental_strategy,
                 }
             )
+
+    @classmethod
+    def create(
+        cls,
+        database: Optional[str] = None,
+        schema: Optional[str] = None,
+        identifier: Optional[str] = None,
+        type: Optional[RelationType] = None,
+        **kwargs,
+    ):
+        kwargs.update(
+            {
+                "path": {
+                    "database": database,
+                    "schema": schema,
+                    "identifier": identifier,
+                },
+                "type": type,
+                "adapter": kwargs['adapter'] if 'adapter' in kwargs else None
+            }
+        )
+        return cls.from_dict(kwargs)
 
     def new_copy(self, name, identifier):
         new_relation = ImpalaRelation.create(

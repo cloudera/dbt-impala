@@ -132,14 +132,7 @@
 
   {%- for rs in result_set -%}
     {% set obj_type = [] %}
-
-    {% do obj_type.append(rs[0]) %}
-
-    {% set obj_rel = relation.new_copy(relation.schema, rs[0]) %}
-    {% set rel_type = get_relation_type(obj_rel) %}
-    {% do obj_type.append(rel_type) %}
-
-    {% do objects_with_type.append(obj_type) %}
+    {% do objects_with_type.append([rs[0]]) %}
   {%- endfor -%}
 
   {{ return(objects_with_type) }}
