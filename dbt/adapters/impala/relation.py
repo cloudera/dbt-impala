@@ -71,6 +71,7 @@ class ImpalaRelation(BaseRelation):
                         identifier=self.identifier,
                         information=self.identifier,
                     )})
+                print("result is:", result)
                 return result
             return None
         return object.__getattribute__(self, name)
@@ -88,28 +89,6 @@ class ImpalaRelation(BaseRelation):
                     "incremental_strategy": incremental_strategy,
                 }
             )
-
-    @classmethod
-    def create(
-        cls,
-        database: Optional[str] = None,
-        schema: Optional[str] = None,
-        identifier: Optional[str] = None,
-        type: Optional[RelationType] = None,
-        **kwargs,
-    ):
-        kwargs.update(
-            {
-                "path": {
-                    "database": database,
-                    "schema": schema,
-                    "identifier": identifier,
-                },
-                "type": type,
-                "adapter": kwargs['adapter'] if 'adapter' in kwargs else None
-            }
-        )
-        return cls.from_dict(kwargs)
 
     def new_copy(self, name, identifier):
         new_relation = ImpalaRelation.create(
