@@ -1,0 +1,8 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-7.3.0, pluggy-1.0.0
+rootdir: /Users/vkolanu/dbt_impala/dbt-impala
+configfile: pytest.ini
+plugins: dotenv-0.5.2
+collected 58 items
+
+tests/functional/adapter/test_basic.py::TestSimpleMaterializationsImpala::test_base 
