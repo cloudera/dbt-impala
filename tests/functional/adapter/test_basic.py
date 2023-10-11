@@ -98,6 +98,12 @@ class TestIncrementalImpala(BaseIncremental):
         # check relations equal
         check_relations_equal(project.adapter, ["added", "incremental_test_model"])
 
+        # run full-refresh and compare with base table again
+        results = run_dbt(["run", "--select", "incremental_test_model", "--full-refresh", "--vars", "seed_name: base"])
+        assert len(results) == 1
+
+        check_relations_equal(project.adapter, ["base", "incremental_test_model"])
+
         # get catalog from docs generate
         catalog = run_dbt(["docs", "generate"])
         assert len(catalog.nodes) == 3
