@@ -314,8 +314,6 @@
 {%- endmacro %}
 
 {%- materialization view, adapter='impala' -%}
-  {{ print("why view") }}
-  {{ print(model) }}
   {% set materialization_view_err_message %}
     This adapter does not support view materialization. Please use table materialization instead.
   {% endset %}

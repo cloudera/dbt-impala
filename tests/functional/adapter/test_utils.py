@@ -171,6 +171,10 @@ from dbt.tests.adapter.utils.fixture_except import (
     models__test_except_empty_minus_empty_sql,
 )
 
+from dbt.tests.adapter.basic.files import (
+    config_materialized_table,
+)
+
 models__test_concat_sql = """
 with util_data as (
 
@@ -900,5 +904,14 @@ class TestListagg(BaseListagg):
 class TestIntersect(BaseIntersect):
   pass
 
+
+models__current_ts_sql = """
+select {{ dbt.current_timestamp() }} as current_ts_column
+"""
 class TestCurrentTimestamp(BaseCurrentTimestampNaive):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "current_ts.sql": config_materialized_table + models__current_ts_sql,
+        }
     pass
