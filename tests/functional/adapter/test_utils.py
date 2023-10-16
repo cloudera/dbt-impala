@@ -144,33 +144,6 @@ from dbt.tests.adapter.utils.fixture_string_literal import (
     models__test_string_literal_yml,
 )
 
-from dbt.tests.adapter.utils.fixture_intersect import (
-    seeds__data_intersect_a_csv,
-    seeds__data_intersect_b_csv,
-    seeds__data_intersect_a_overlap_b_csv,
-    models__data_intersect_empty_sql,
-    models__test_intersect_a_overlap_b_sql,
-    models__test_intersect_b_overlap_a_sql,
-    models__test_intersect_a_overlap_a_sql,
-    models__test_intersect_a_overlap_empty_sql,
-    models__test_intersect_empty_overlap_a_sql,
-    models__test_intersect_empty_overlap_empty_sql,
-)
-
-from dbt.tests.adapter.utils.fixture_except import (
-    seeds__data_except_a_csv,
-    seeds__data_except_b_csv,
-    seeds__data_except_a_minus_b_csv,
-    seeds__data_except_b_minus_a_csv,
-    models__data_except_empty_sql,
-    models__test_except_a_minus_b_sql,
-    models__test_except_b_minus_a_sql,
-    models__test_except_a_minus_a_sql,
-    models__test_except_a_minus_empty_sql,
-    models__test_except_empty_minus_a_sql,
-    models__test_except_empty_minus_empty_sql,
-)
-
 from dbt.tests.adapter.basic.files import (
     config_materialized_table,
 )
