@@ -10,8 +10,8 @@ The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along 
 
 ### Requirements
 
-Current version of dbt-impala work only with dbt-core 1.3 but not with dbt-core >= 1.4.
-We are actively working on next release 1.4 which will work with dbt-core 1.4
+Current version of dbt-impala work only with dbt-core 1.4 but not with dbt-core >= 1.5.
+We are actively working on next release 1.5 which will work with dbt-core 1.5
 
 Python >= 3.7
 dbt-core == 1.3.*
