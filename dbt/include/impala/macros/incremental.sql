@@ -99,6 +99,7 @@
       {% set need_swap = true %}
   {% else %}
     {% do run_query(get_create_table_as_sql(True, temp_relation, sql)) %}
+    {% do to_drop.append(temp_relation) %}
     {% do adapter.expand_target_column_types(
              from_relation=temp_relation,
              to_relation=target_relation) %}
