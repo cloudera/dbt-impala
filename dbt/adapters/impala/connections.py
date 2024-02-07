@@ -257,7 +257,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             ImpalaConnectionManager.fetch_impala_version(connection.handle)
         except Exception as ex:
-            logger.debug(f"Connection error {ex}")
+            logger.error(f"Connection error {ex}")
             connection_ex = ex
             connection.state = ConnectionState.FAIL
             connection.handle = None
