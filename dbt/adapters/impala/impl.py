@@ -108,8 +108,8 @@ class ImpalaAdapter(SQLAdapter):
                 return []
             else:
                 description = "Error while retrieving information about"
-                logger.debug(f"{description} {schema_relation}: {e.msg}")
-                return []
+                logger.error(f"{description} {schema_relation}: {e.msg}")
+                raise e
 
         relations = []
         for row in results:

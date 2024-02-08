@@ -46,7 +46,7 @@ def _get_dbt_core_version():
 
 package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
-package_version = "1.4.1"
+package_version = "1.4.2"
 description = """The Impala adapter plugin for dbt"""
 
 dbt_core_version = _get_dbt_core_version()
