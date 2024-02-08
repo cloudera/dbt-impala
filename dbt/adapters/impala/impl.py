@@ -113,24 +113,24 @@ class ImpalaAdapter(SQLAdapter):
 
         relations = []
         for row in results:
-            if len(row) != 2:
+            if len(row) != 1:
                 raise dbt.exceptions.DbtRuntimeError(
-                    f'Invalid value from "show table extended ...", '
-                    f"got {len(row)} values, expected 4"
+                    f'Invalid value from "show tables in ...", '
+                    f"got {len(row)} values, expected 1"
                 )
             _identifier = row[0]
-            _rel_type = row[1]
 
             relation = self.Relation.create(
                 database=None,
                 schema=schema_relation.schema,
                 identifier=_identifier,
-                type=_rel_type,
                 information=_identifier,
+                adapter=self
             )
             relations.append(relation)
 
         return relations
+
 
     def get_columns_in_relation(self, relation: Relation) -> List[ImpalaColumn]:
         cached_relations = self.cache.get_relations(relation.database, relation.schema)
