@@ -98,10 +98,17 @@ class ImpalaAdapter(SQLAdapter):
     def list_relations_without_caching(
         self, schema_relation: ImpalaRelation
     ) -> List[ImpalaRelation]:
-        kwargs = {"schema_relation": schema_relation}
-
+        """
+        Get a list of Relation(table or view) by SQL directly
+        Use different SQL statement for view/table
+        Need this fix: https://issues.apache.org/jira/browse/IMPALA-3268
+        """
+        kwargs = {"schema": schema_relation}
         try:
-            results = self.execute_macro(LIST_RELATIONS_MACRO_NAME, kwargs=kwargs)
+            result_tables = self.execute_macro(
+                "impala__list_tables_without_caching", kwargs=kwargs
+            )
+            result_views = self.execute_macro("impala__list_views_without_caching", kwargs=kwargs)
         except dbt.exceptions.DbtRuntimeError as e:
             errmsg = getattr(e, "msg", "")
             if f"Database '{schema_relation}' not found" in errmsg:
@@ -111,24 +118,35 @@ class ImpalaAdapter(SQLAdapter):
                 logger.error(f"{description} {schema_relation}: {e.msg}")
                 raise e
 
-        relations = []
-        for row in results:
-            if len(row) != 2:
-                raise dbt.exceptions.DbtRuntimeError(
-                    f'Invalid value from "show table extended ...", '
-                    f"got {len(row)} values, expected 4"
-                )
-            _identifier = row[0]
-            _rel_type = row[1]
+        # Impala
+        # Collect table/view separately
+        # Unfortunatly, Impala does not distincguish table/view
+        # Currently views are also listed in `show tables`
 
-            relation = self.Relation.create(
-                database=None,
-                schema=schema_relation.schema,
-                identifier=_identifier,
-                type=_rel_type,
-                information=_identifier,
+        result_tables_without_view = []
+        for row in result_tables:
+            # check if this table is view
+            is_view = len(list(filter(lambda x: x["name"] == row["name"], result_views))) == 1
+            if not is_view:
+                result_tables_without_view.append(row)
+
+        relations = []
+        for row in result_tables_without_view:
+            relations.append(
+                self.Relation.create(
+                    schema=schema_relation.schema,
+                    identifier=row["name"],
+                    type="table",
+                )
             )
-            relations.append(relation)
+        for row in result_views:
+            relations.append(
+                self.Relation.create(
+                    schema=schema_relation.schema,
+                    identifier=row["name"],
+                    type="view",
+                )
+            )
 
         return relations
 
