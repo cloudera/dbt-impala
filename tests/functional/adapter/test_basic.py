@@ -12,9 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import pytest
 
-from dbt.tests.util import run_dbt, check_relations_equal, relation_from_name
+from dbt.tests.util import (
+    run_dbt,
+    get_manifest,
+    check_result_nodes_by_name,
+    check_relations_equal,
+    relation_from_name,
+    check_relation_types
+)
 
 from dbt.tests.adapter.basic.test_base import BaseSimpleMaterializations
 from dbt.tests.adapter.basic.test_singular_tests import BaseSingularTests
@@ -33,13 +41,79 @@ from dbt.tests.adapter.basic.test_adapter_methods import BaseAdapterMethod
 from dbt.tests.adapter.utils.base_utils import BaseUtils
 
 from dbt.tests.adapter.basic.files import (
+    config_materialized_table,
+    base_table_sql,
+    base_materialized_var_sql,
     schema_base_yml,
     incremental_sql,
+    base_ephemeral_sql,
+    ephemeral_table_sql,
+    ephemeral_with_cte_sql,
+    test_ephemeral_passing_sql,
+    test_ephemeral_failing_sql,
+    seeds_base_csv,
+    generic_test_seed_yml,
+    base_view_sql,
+    generic_test_view_yml,
+    generic_test_table_yml
 )
 
 
 class TestSimpleMaterializationsImpala(BaseSimpleMaterializations):
-    pass
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "table_model.sql": base_table_sql,
+            "swappable.sql": base_materialized_var_sql,
+            "schema.yml": schema_base_yml,
+        }
+
+    def test_base(self, project):
+        # seed command
+        results = run_dbt(["seed"])
+        # seed result length
+        assert len(results) == 1
+
+        # run command
+        results = run_dbt()
+        # run result length
+        assert len(results) == 2
+
+        # names exist in result nodes
+        check_result_nodes_by_name(results, ["table_model", "swappable"])
+
+        # check relation types
+        expected = {
+            "base": "table",
+            "table_model": "table",
+            "swappable": "table",
+        }
+        check_relation_types(project.adapter, expected)
+
+        # base table rowcount
+        relation = relation_from_name(project.adapter, "base")
+        result = project.run_sql(f"select count(*) as num_rows from {relation}", fetch="one")
+        assert result[0] == 10
+
+        # relations_equal
+        check_relations_equal(project.adapter, ["base", "table_model", "swappable"])
+
+        # check relations in catalog
+        catalog = run_dbt(["docs", "generate"])
+        assert len(catalog.nodes) == 3
+        assert len(catalog.sources) == 1
+
+        # run_dbt changing materialized_var to incremental
+        results = run_dbt(["run", "-m", "swappable", "--vars", "materialized_var: incremental"])
+        assert len(results) == 1
+
+        # check relation types, swappable is table
+        expected = {
+            "base": "table",
+            "table_model": "table",
+            "swappable": "table",
+        }
+        check_relation_types(project.adapter, expected)
 
 
 class TestSingularTestsImpala(BaseSingularTests):
@@ -47,15 +121,100 @@ class TestSingularTestsImpala(BaseSingularTests):
 
 
 class TestSingularTestsEphemeralImpala(BaseSingularTestsEphemeral):
-    pass
+    @pytest.fixture(scope="class")
+    def seeds(self):
+        return {
+            "base.csv": seeds_base_csv,
+        }
 
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "ephemeral.sql": ephemeral_with_cte_sql,
+            "passing_model.sql": config_materialized_table + test_ephemeral_passing_sql,
+            "failing_model.sql": config_materialized_table + test_ephemeral_failing_sql,
+            "schema.yml": schema_base_yml,
+        }
+
+    @pytest.fixture(scope="class")
+    def tests(self):
+        return {
+            "passing.sql": test_ephemeral_passing_sql,
+            "failing.sql": test_ephemeral_failing_sql,
+        }
+
+    @pytest.fixture(scope="class")
+    def project_config_update(self):
+        return {
+            "name": "singular_tests_ephemeral",
+        }
+
+    def test_singular_tests_ephemeral(self, project):
+        # check results from seed command
+        results = run_dbt(["seed"])
+        assert len(results) == 1
+        check_result_nodes_by_name(results, ["base"])
+
+        # Check results from test command
+        results = run_dbt(["test"], expect_pass=False)
+        assert len(results) == 2
+        check_result_nodes_by_name(results, ["passing", "failing"])
+
+        # Check result status
+        for result in results:
+            if result.node.name == "passing":
+                assert result.status == "pass"
+            elif result.node.name == "failing":
+                assert result.status == "fail"
+
+        # check results from run command
+        results = run_dbt()
+        assert len(results) == 2
+        check_result_nodes_by_name(results, ["failing_model", "passing_model"])
 
 class TestEmptyImpala(BaseEmpty):
     pass
 
-
 class TestEphemeralImpala(BaseEphemeral):
-    pass
+   
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "ephemeral.sql": base_ephemeral_sql,
+            "table_model.sql": ephemeral_table_sql,
+            "schema.yml": schema_base_yml,
+        }
+
+    def test_ephemeral(self, project):
+        # seed command
+        results = run_dbt(["seed"])
+        assert len(results) == 1
+        check_result_nodes_by_name(results, ["base"])
+
+        # run command
+        results = run_dbt(["run"])
+        assert len(results) == 1
+        check_result_nodes_by_name(results, ["table_model"])
+
+        # base table rowcount
+        relation = relation_from_name(project.adapter, "base")
+        result = project.run_sql(f"select count(*) as num_rows from {relation}", fetch="one")
+        assert result[0] == 10
+
+        # relations equal
+        check_relations_equal(project.adapter, ["base", "table_model"])
+
+        # catalog node count
+        catalog = run_dbt(["docs", "generate"])
+        catalog_path = os.path.join(project.project_root, "target", "catalog.json")
+        assert os.path.exists(catalog_path)
+        assert len(catalog.nodes) == 2
+        assert len(catalog.sources) == 1
+
+        # manifest (not in original)
+        manifest = get_manifest(project.project_root)
+        assert len(manifest.nodes) == 3
+        assert len(manifest.sources) == 1
 
 
 class TestIncrementalImpala(BaseIncremental):
@@ -162,7 +321,39 @@ class TestIncrementalWithMultiplePartitionKeyImpala(TestIncrementalImpala):
 
 
 class TestGenericTestsImpala(BaseGenericTests):
-    pass
+    def project_config_update(self):
+        return {"name": "generic_tests"}
+
+    @pytest.fixture(scope="class")
+    def seeds(self):
+        return {
+            "base.csv": seeds_base_csv,
+            "schema.yml": generic_test_seed_yml,
+        }
+
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "table_model.sql": base_table_sql,
+            "schema.yml": schema_base_yml,
+            "schema_table.yml": generic_test_table_yml,
+        }
+
+    def test_generic_tests(self, project):
+        # seed command
+        results = run_dbt(["seed"])
+
+        # test command selecting base model
+        results = run_dbt(["test", "-m", "base"])
+        assert len(results) == 1
+
+        # run command
+        results = run_dbt(["run"])
+        assert len(results) == 1
+
+        # test command, all tests
+        results = run_dbt(["test"])
+        assert len(results) == 2
 
 
 @pytest.mark.skip(reason="Not working from the start ie v1.3.3")
@@ -174,7 +365,7 @@ class TestSnapshotCheckColsImpala(BaseSnapshotCheckCols):
 class TestSnapshotTimestampImpala(BaseSnapshotTimestamp):
     pass
 
-
+@pytest.mark.skip(reason="Not working after views is disabled")
 class TestBaseAdapterMethod(BaseAdapterMethod):
     pass
 

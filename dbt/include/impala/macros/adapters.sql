@@ -236,31 +236,7 @@
 {% endmacro %}
 
 {% macro get_relation_type(relation) -%}
-  {% set rel_type = 'table' %}
-  {% set relation_exists = is_relation_present(relation) %}
-
-  {%- if relation_exists -%}
-    {% set result_set = run_query('describe extended ' ~ relation) %}
-
-    {% if execute %}
-      {%- for rs in result_set -%}
-        {%- if rs[0].startswith('Table Type') -%}
-          {%- if rs[1].startswith('VIRTUAL_VIEW') -%}
-            {% set rel_type = 'view' %}
-            {% do return(rel_type) %}
-          {%- elif rs[1].startswith('MANAGED_TABLE') -%}
-            {% set rel_type = 'table' %}
-            {% do return(rel_type) %}
-          {%- elif rs[1].startswith('EXTERNAL_TABLE') -%}
-            {% set rel_type = 'table' %}
-            {% do return(rel_type) %}
-          {%- endif -%}
-        {%- endif -%}
-      {%- endfor -%}
-    {%- endif -%}
-  {%- endif -%}
-
-  {% do return(rel_type) %}
+  {% do return('table') %}
 {% endmacro %}
 
 {% macro impala__rename_relation(from_relation, to_relation) -%}
@@ -351,6 +327,13 @@
 {% macro impala__generate_database_name(custom_database_name=none, node=none) -%}
   {% do return(None) %}
 {%- endmacro %}
+
+{%- materialization view, adapter='impala' -%}
+  {% set materialization_view_err_message %}
+    This adapter does not support view materialization. Please use table materialization instead.
+  {% endset %}
+  {% do exceptions.raise_compiler_error(materialization_view_err_message) %}
+{% endmaterialization %}
 
 /* snapshots flow for impala */
 {% materialization snapshot, adapter='impala' %}
