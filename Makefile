@@ -9,10 +9,10 @@ PROFILE := dwx_endpoint
 CHANGED_FILES := $(shell git ls-files --modified --other --exclude-standard)
 CHANGED_FILES_IN_BRANCH := $(shell git diff --name-only $(shell git merge-base origin/master HEAD))
 
-.PHONY: all install prepare-env functional_test test clean help
+.PHONY: all install dev_setup functional_test test clean help
 .PHONY: pre-commit pre-commit-in-branch pre-commit-all
 
-all: prepare-env test  ## Default target for dev setup and run tests.
+all: dev_setup test  ## Default target for dev setup and run tests.
 
 # Required python3 already installed in the system
 $(VENV)/bin/activate:
@@ -24,7 +24,7 @@ install: $(VENV)/bin/activate dev-requirements.txt	## Install all dependencies.
 	$(VENV)/bin/python3 -m pip install --upgrade pip
 	$(VENV)/bin/pip install -e . -r dev-requirements.txt
 
-prepare-env: $(VENV)/bin/activate	 ## Install all dependencies and setup pre-commit.
+dev_setup: $(VENV)/bin/activate	 ## Install all dependencies and setup pre-commit.
 	@\
 	make install
 	$(VENV)/bin/pre-commit install
