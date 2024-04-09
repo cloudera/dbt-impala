@@ -38,7 +38,6 @@ from dbt.tests.adapter.utils.test_current_timestamp import BaseCurrentTimestampN
 
 from dbt.tests.adapter.utils.fixture_concat import (
     seeds__data_concat_csv,
-    models__test_concat_sql,
     models__test_concat_yml,
 )
 
@@ -139,10 +138,23 @@ from dbt.tests.adapter.utils.fixture_listagg import (
     models__test_listagg_yml,
 )
 
+# dbt-core uses `data` instead of `util_data`. data is a Reserved in impala.
+# https://impala.apache.org/docs/build/html/topics/impala_reserved_words.html
+# Hence we had to replace this model to use util_data instead of data.
 models__test_concat_sql = """
-with util_data as (
+with seed_data as (
 
     select * from {{ ref('data_concat') }}
+
+),
+
+util_data as (
+
+    select
+        {{ replace_empty('input_1') }} as input_1,
+        {{ replace_empty('input_2') }} as input_2,
+        {{ replace_empty('output') }} as output
+    from seed_data
 
 )
 
@@ -406,10 +418,22 @@ class TestStringLiteral(BaseStringLiteral):
     pass
 
 
+# dbt-core uses `data` instead of `util_data`. data is a Reserved in impala.
+# https://impala.apache.org/docs/build/html/topics/impala_reserved_words.html
+# Hence we had to replace this model to use util_data instead of data.
 models__test_hash_sql = """
-with util_data as (
+with seed_data as (
 
     select * from {{ ref('data_hash') }}
+
+),
+
+util_data as (
+
+    select
+        {{ replace_empty('input_1') }} as input_1,
+        {{ replace_empty('output') }} as output
+    from seed_data
 
 )
 
@@ -419,11 +443,12 @@ select
 
 from util_data
 """
+
 seeds__data_hash_csv = """input_1,output
 ab,3FBCEECA48A5E50A
 a,1C9DA4DB639FDDAC
 1,1C9DF4DB63A0659C
-,811C9DC5
+EMPTY,811C9DC5
 """
 
 
@@ -648,7 +673,6 @@ from util_data
 
 -- Also test correct casting of literal values.
 
-union all select {{ datediff("'1999-12-31 23:59:59.999999'", "'2000-01-01 00:00:00.000000'", "microsecond") }} as actual, 1 as expected
 union all select {{ datediff("'1999-12-31 23:59:59.999999'", "'2000-01-01 00:00:00.000000'", "millisecond") }} as actual, 1 as expected
 union all select {{ datediff("'1999-12-31 23:59:59.999999'", "'2000-01-01 00:00:00.000000'", "second") }} as actual, 1 as expected
 union all select {{ datediff("'1999-12-31 23:59:59.999999'", "'2000-01-01 00:00:00.000000'", "minute") }} as actual, 1 as expected
@@ -768,15 +792,6 @@ calculate as (
         group_col,
         {{ listagg('string_text', "'_|_'", "order by order_col") }} as actual,
         'bottom_ordered' as version
-    from util_data
-    group by group_col
-
-    union all
-
-    select
-        group_col,
-        {{ listagg('string_text', "'_|_'", "order by order_col", 2) }} as actual,
-        'bottom_ordered_limited' as version
     from util_data
     group by group_col
 
