@@ -73,6 +73,32 @@ WARNING: The parameters in your `test.env` file must link to a valid Impala inst
 ### "Local" test commands
 There are a few methods for running tests locally.
 
+#### `tox`
+`tox` takes care of managing Python virtualenvs and installing dependencies in order to run tests.
+
+To Run individual test:
+```sh
+make test TESTS=tests/functional/adapter/test_basic.py::TestSimpleMaterializationsHive
+```
+
+To Run individual test for a specific python version:
+```sh
+make test TESTS=tests/functional/adapter/test_basic.py::TestSimpleMaterializationsHive PYTHON_VERSION=py38
+
+```
+
+To Run tests across all version of python:
+```sh
+make test_all_python_versions TESTS=tests/functional/adapter/test_basic.py::TestSimpleMaterializationsHive
+```
+
+The configuration of these tests are located in `tox.ini`.
+
+NOTE:
+1. Python versions for which you are running tests have to be installed on your machine manually.
+2. To configure the pytest setting, update pytest.ini. By default, all the tests run logs are captured in `logs/<test-run>/dbt.log`
+
+
 #### `pytest`
 You may run a specific test or group of tests using `pytest` directly. Activate a Python virtualenv active with dev dependencies installed. Use the appropriate profile like cdh_endpoint or dwx_endpoint. Then, run tests like so:
 
