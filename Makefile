@@ -2,7 +2,7 @@
 PYTHON_VERSION ?= py311
 
 # Define the name of the virtual environment directory
-VENV ?= .venv-dbt-hive
+VENV ?= .venv-dbt-impala
 
 # Define the profile used by the dbt
 PROFILE ?= dwx_endpoint
