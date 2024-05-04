@@ -17,7 +17,6 @@ from typing import TypeVar, Optional, Dict, Any
 
 from dbt.adapters.base.column import Column
 from dbt.dataclass_schema import dbtClassMixin
-from hologram import JsonDict
 
 Self = TypeVar("Self", bound="ImpalaColumn")
 
@@ -69,7 +68,7 @@ class ImpalaColumn(dbtClassMixin, Column):
                 table_stats[f"stats:{key}:include"] = True
         return table_stats
 
-    def to_column_dict(self, omit_none: bool = True, validate: bool = False) -> JsonDict:
+    def to_column_dict(self, omit_none: bool = True, validate: bool = False):
         original_dict = self.to_dict(omit_none=omit_none)
 
         # If there are stats, merge them into the root of the dict
