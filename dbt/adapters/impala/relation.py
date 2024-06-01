@@ -37,7 +37,7 @@ class ImpalaIncludePolicy(Policy):
 class ImpalaRelation(BaseRelation):
     quote_policy: ImpalaQuotePolicy = field(default_factory=lambda: ImpalaQuotePolicy())
     include_policy: ImpalaIncludePolicy = field(default_factory=lambda: ImpalaIncludePolicy())
-    quote_character: str = None
+    quote_character: str = '`'
     information: str = None
 
     def __post_init__(self):
