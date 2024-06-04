@@ -133,6 +133,21 @@
     {{ return(load_result('list_schemas').table) }}
 {% endmacro %}
 
+{% macro list_tables_in_relation(relation) %}
+  {% set result_set = run_query('show tables in ' ~ relation) %}
+
+  {% set tables = [] %}
+
+  {% if execute %}
+    {%- for rs in result_set -%}
+      {% do tables.append(relation.new_copy(relation.schema, rs[0])) %}
+    {%- endfor -%}
+  {% endif %}
+
+  {{ return(tables) }}
+{% endmacro %}
+
+
 {# Note: This function currently needs to query each object to determine its type. Depending on the schema, this function could be expensive. #}
 {% macro impala__list_relations_without_caching(relation) %}
   {% set result_set = run_query('show tables in ' ~ relation) %}

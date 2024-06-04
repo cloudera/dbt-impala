@@ -35,6 +35,8 @@ logger = AdapterLogger("Impala")
 
 LIST_SCHEMAS_MACRO_NAME = "list_schemas"
 LIST_RELATIONS_MACRO_NAME = "list_relations_without_caching"
+LIST_TABLES_IN_RELATION_MACRO_NAME = "list_tables_in_relation"
+GET_RELATIONSHIP_TYPE_MACRO_NAME = "get_relation_type"
 
 KEY_TABLE_OWNER = "Owner"
 KEY_TABLE_STATISTICS = "Statistics"
@@ -95,31 +97,35 @@ class ImpalaAdapter(SQLAdapter):
 
         return schemas
 
+    def fetch_relation_type(self, relation: Relation) -> str:
+        try:
+            kwargs = {"relation": relation}
+            relation_type = self.execute_macro(GET_RELATIONSHIP_TYPE_MACRO_NAME, kwargs=kwargs)
+        except dbt.exceptions.DbtRuntimeError as e:
+            logger.error(
+                f"Unable to fetch relation type {relation.schema}.{relation.identifier}: {e.msg}"
+            )
+            return None
+        return relation_type
+
     def list_relations_without_caching(
         self, schema_relation: ImpalaRelation
     ) -> List[ImpalaRelation]:
-        kwargs = {"schema_relation": schema_relation}
-
         try:
-            results = self.execute_macro(LIST_RELATIONS_MACRO_NAME, kwargs=kwargs)
+            kwargs = {"relation": schema_relation}
+            table_relations = self.execute_macro(LIST_TABLES_IN_RELATION_MACRO_NAME, kwargs=kwargs)
         except dbt.exceptions.DbtRuntimeError as e:
             errmsg = getattr(e, "msg", "")
-            if f"Database '{schema_relation}' not found" in errmsg:
+            if f"Database does not exist" in errmsg:
                 return []
             else:
-                description = "Error while retrieving information about"
-                logger.debug(f"{description} {schema_relation}: {e.msg}")
-                return []
+                logger.error(f"Unable to extract tables in relation {schema_relation}: {errmsg}")
+                raise e
 
         relations = []
-        for row in results:
-            if len(row) != 2:
-                raise dbt.exceptions.DbtRuntimeError(
-                    f'Invalid value from "show table extended ...", '
-                    f"got {len(row)} values, expected 4"
-                )
-            _identifier = row[0]
-            _rel_type = row[1]
+        for table_relation in table_relations:
+            _rel_type = self.fetch_relation_type(table_relation)
+            _identifier = table_relation.identifier
 
             relation = self.Relation.create(
                 database=None,
