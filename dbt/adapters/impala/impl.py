@@ -21,10 +21,10 @@ import agate
 import dbt.exceptions
 from dbt.adapters.base.impl import catch_as_completed
 from dbt.adapters.sql import SQLAdapter
-from dbt_common.clients import agate_helper
-from dbt_common.clients.agate_helper import ColumnTypeBuilder, NullableAgateType, _NullMarker
-from dbt.adapters.events.logging import AdapterLogger
-from dbt_common.utils import executor
+from dbt.clients import agate_helper
+from dbt.clients.agate_helper import ColumnTypeBuilder, NullableAgateType, _NullMarker
+from dbt.events import AdapterLogger
+from dbt.utils import executor
 
 import dbt.adapters.impala.cloudera_tracking as tracker
 from dbt.adapters.impala import ImpalaConnectionManager
