@@ -18,18 +18,18 @@ from dataclasses import dataclass
 import time
 import dbt.exceptions
 
-from dbt.adapters.base import Credentials
+from dbt.adapters.contracts.connection import Credentials
 from dbt.adapters.sql import SQLConnectionManager
-from dbt.contracts.connection import AdapterRequiredConfig
+from dbt.adapters.contracts.connection import AdapterRequiredConfig
 
 from typing import Optional, Tuple, Any
 
-from dbt.contracts.connection import Connection, AdapterResponse, ConnectionState
+from dbt.adapters.contracts.connection import Connection, AdapterResponse, ConnectionState
 
-from dbt.events.functions import fire_event
-from dbt.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
+from dbt_common.events.functions import fire_event
+from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 
-from dbt.events import AdapterLogger
+from dbt.adapters.events.logging import AdapterLogger
 
 import impala.dbapi
 from impala.error import DatabaseError
