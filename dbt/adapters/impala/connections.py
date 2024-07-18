@@ -23,6 +23,7 @@ from dbt.adapters.sql import SQLConnectionManager
 from dbt.adapters.contracts.connection import AdapterRequiredConfig
 
 from typing import Optional, Tuple, Any
+from multiprocessing.context import SpawnContext
 
 from dbt.adapters.contracts.connection import Connection, AdapterResponse, ConnectionState
 
@@ -158,8 +159,8 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
     impala_version = None
 
-    def __init__(self, profile: AdapterRequiredConfig):
-        super().__init__(profile)
+    def __init__(self, profile: AdapterRequiredConfig, mp_context: SpawnContext):
+        super().__init__(profile, mp_context)
         # generate profile related object for instrumentation.
         tracker.generate_profile_info(self)
 
