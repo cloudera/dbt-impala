@@ -15,16 +15,17 @@
 import re
 from collections import OrderedDict
 from concurrent.futures import Future
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, FrozenSet, Tuple
 
 import agate
 import dbt.exceptions
 from dbt.adapters.base.impl import catch_as_completed
 from dbt.adapters.sql import SQLAdapter
-from dbt.clients import agate_helper
-from dbt.clients.agate_helper import ColumnTypeBuilder, NullableAgateType, _NullMarker
-from dbt.events import AdapterLogger
-from dbt.utils import executor
+from dbt_common.clients import agate_helper
+from dbt_common.clients.agate_helper import ColumnTypeBuilder, NullableAgateType, _NullMarker
+from dbt.adapters.events.logging import AdapterLogger
+from dbt_common.utils import executor
+from dbt.adapters.contracts.relation import RelationConfig
 
 import dbt.adapters.impala.cloudera_tracking as tracker
 from dbt.adapters.impala import ImpalaConnectionManager
@@ -275,23 +276,23 @@ class ImpalaAdapter(SQLAdapter):
 
         return columns
 
-    def get_catalog(self, manifest):
-        schema_map = self._get_catalog_schemas(manifest)
+    def get_catalog(
+        self, relation_configs: Iterable[RelationConfig], used_schemas: FrozenSet[Tuple[str, str]]
+    ):
+        schema_map = self._get_catalog_schemas(relation_configs)
 
         with executor(self.config) as tpe:
             futures: List[Future[agate.Table]] = []
             for info, schemas in schema_map.items():
                 for schema in schemas:
                     futures.append(
-                        tpe.submit_connected(
-                            self, schema, self._get_one_catalog, info, [schema], manifest
-                        )
+                        tpe.submit_connected(self, schema, self._get_one_catalog, info, [schema])
                     )
             catalogs, exceptions = catch_as_completed(futures)  # call the default implementation
 
         return catalogs, exceptions
 
-    def _get_one_catalog(self, information_schema, schemas, manifest) -> agate.Table:
+    def _get_one_catalog(self, information_schema, schemas) -> agate.Table:
         if len(schemas) != 1:
             dbt.exceptions.raise_compiler_error(
                 f"Expected only one schema in ImpalaAdapter._get_one_catalog, found " f"{schemas}"

@@ -10,10 +10,10 @@ The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along 
 
 ### Requirements
 
-Current version of dbt-impala use dbt-core 1.7.*. We are actively working on supporting the next version of dbt-core 1.8
+Current version of dbt-impala uses dbt-core 1.8.*. We are actively working on supporting the next available version of dbt-core.
 
 Python >= 3.7
-dbt-core == 1.7.*
+dbt-core == 1.8.*
 
 For development/testing or contribution to the dbt-impala, please follow [Contributing](CONTRIBUTING.md) guidelines.
 
