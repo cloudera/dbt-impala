@@ -180,7 +180,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             )
         except DatabaseError as dbError:
             logger.debug(f"Database connection error: {str(dbError)}")
-            raise dbt.exceptions.DatabaseException("Database Connection error: " + str(dbError))
+            raise dbt.exceptions.DbtDatabaseError("Database Connection error: " + str(dbError))
         except Exception as exc:
             logger.debug(f"Error running SQL: {sql}")
             raise dbt.exceptions.DbtRuntimeError(str(exc))
