@@ -18,18 +18,19 @@ from dataclasses import dataclass
 import time
 import dbt.exceptions
 
-from dbt.adapters.base import Credentials
+from dbt.adapters.contracts.connection import Credentials
 from dbt.adapters.sql import SQLConnectionManager
-from dbt.contracts.connection import AdapterRequiredConfig
+from dbt.adapters.contracts.connection import AdapterRequiredConfig
 
 from typing import Optional, Tuple, Any
+from multiprocessing.context import SpawnContext
 
-from dbt.contracts.connection import Connection, AdapterResponse, ConnectionState
+from dbt.adapters.contracts.connection import Connection, AdapterResponse, ConnectionState
 
-from dbt.events.functions import fire_event
-from dbt.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
+from dbt_common.events.functions import fire_event
+from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 
-from dbt.events import AdapterLogger
+from dbt.adapters.events.logging import AdapterLogger
 
 import impala.dbapi
 from impala.error import DatabaseError
@@ -158,8 +159,8 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
     impala_version = None
 
-    def __init__(self, profile: AdapterRequiredConfig):
-        super().__init__(profile)
+    def __init__(self, profile: AdapterRequiredConfig, mp_context: SpawnContext):
+        super().__init__(profile, mp_context)
         # generate profile related object for instrumentation.
         tracker.generate_profile_info(self)
 
