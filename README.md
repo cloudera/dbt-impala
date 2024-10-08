@@ -7,6 +7,7 @@ The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along 
 
 - [Install dbt](https://docs.getdbt.com/docs/installation)
 - Read the [introduction](https://docs.getdbt.com/docs/introduction/) and [viewpoint](https://docs.getdbt.com/docs/about/viewpoint/)
+- For using `dbt-impala` adapter against [Apache Kudu](https://kudu.apache.org), please follow [Kudu Integration](KUDU_INTEGRATION.md) guidelines.
 
 ### Requirements
 
