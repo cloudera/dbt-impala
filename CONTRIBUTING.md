@@ -61,6 +61,7 @@ When `dbt-impala` is installed this way, any changes you make to the `dbt-impala
 `dbt-impala` contains [functional](https://github.com/cloudera/dbt-impala/tree/master/tests/functional/) tests. Functional tests require an actual Impala warehouse to test against.
 
 - You can run functional tests "locally" by configuring a `test.env` file with appropriate `ENV` variables.
+- To run `Kudu functional tests` as part of the test suite when underlying storage is `Kudu`, please set the `ENV` variable `DISABLE_KUDU_TEST` to `false`. Kudu tests are disabled by default as this `ENV` variable is set to true.
 
 ```
 cp test.env.example test.env
