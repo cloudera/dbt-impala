@@ -69,7 +69,7 @@ demo_project:
 |Materialization: Table with Partitions |Yes| Yes | No |
 |Materialization: Incremental - Append|Yes| Yes | Yes |
 |Materialization: Incremental - Append with Partitions |Yes| Yes | No |
-|Materialization: Incremental - Insert+Overwrite |Yes| Yes | Yes |
+|Materialization: Incremental - Insert+Overwrite |Yes| No | No |
 |Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes | No |
 |Materialization: Ephemeral|Yes| Yes | No |
 |Seeds|Yes| Yes | Yes |
