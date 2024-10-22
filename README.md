@@ -7,6 +7,7 @@ The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along 
 
 - [Install dbt](https://docs.getdbt.com/docs/installation)
 - Read the [introduction](https://docs.getdbt.com/docs/introduction/) and [viewpoint](https://docs.getdbt.com/docs/about/viewpoint/)
+- For using `dbt-impala` adapter against [Apache Kudu](https://kudu.apache.org), please follow [Kudu Integration](KUDU_INTEGRATION.md) guidelines.
 
 ### Requirements
 
@@ -40,40 +41,40 @@ demo_project:
 ```
 
 ## Supported features
-| Name | Supported | Iceberg |
-|------|-----------|---------|
-|Materialization: View|Yes| N/A |
-|Materialization: Table|Yes| Yes |
-|Materialization: Table with Partitions |Yes| Yes |
-|Materialization: Incremental - Append|Yes| Yes |
-|Materialization: Incremental - Append with Partitions |Yes| Yes |
-|Materialization: Incremental - Insert+Overwrite |Yes| Yes |
-|Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes |
-|Materialization: Incremental - Merge|No| No |
-|Materialization: Ephemeral|Yes| Yes |
-|Seeds|Yes| Yes |
-|Tests|Yes| Yes |
-|Snapshots|No| No |
-|Documentation|Yes| Yes |
-|Authentication: LDAP|Yes| Yes |
-|Authentication: Kerberos|Yes| No |
+| Name | Supported | Iceberg | Kudu |
+|------|-----------|---------|------|
+|Materialization: View|Yes| N/A | N/A |
+|Materialization: Table|Yes| Yes | Yes |
+|Materialization: Table with Partitions |Yes| Yes | No |
+|Materialization: Incremental - Append|Yes| Yes | Yes |
+|Materialization: Incremental - Append with Partitions |Yes| Yes | No |
+|Materialization: Incremental - Insert+Overwrite |Yes| Yes | Yes |
+|Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes | No |
+|Materialization: Incremental - Merge|No| No | No |
+|Materialization: Ephemeral|Yes| Yes | No |
+|Seeds|Yes| Yes | Yes |
+|Tests|Yes| Yes | Yes |
+|Snapshots|No| No | No |
+|Documentation|Yes| Yes | Yes |
+|Authentication: LDAP|Yes| Yes | Yes |
+|Authentication: Kerberos|Yes| No | No |
 
 ### Tests Coverage
 
 #### Functional Tests
-| Name | Base | Iceberg |
-|------|------|---------|
-|Materialization: View|Yes| N/A |
-|Materialization: Table|Yes| Yes |
-|Materialization: Table with Partitions |Yes| Yes |
-|Materialization: Incremental - Append|Yes| Yes |
-|Materialization: Incremental - Append with Partitions |Yes| Yes |
-|Materialization: Incremental - Insert+Overwrite |Yes| Yes |
-|Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes |
-|Materialization: Ephemeral|Yes| Yes |
-|Seeds|Yes| Yes |
-|Tests|Yes| Yes |
-|Snapshots|No| No |
-|Documentation| Yes | Yes |
-|Authentication: LDAP|Yes| Yes |
-|Authentication: Kerberos|No| No |
+| Name | Base | Iceberg | Kudu |
+|------|------|---------|------|
+|Materialization: View|Yes| N/A | N/A |
+|Materialization: Table|Yes| Yes | Yes |
+|Materialization: Table with Partitions |Yes| Yes | No |
+|Materialization: Incremental - Append|Yes| Yes | Yes |
+|Materialization: Incremental - Append with Partitions |Yes| Yes | No |
+|Materialization: Incremental - Insert+Overwrite |Yes| No | No |
+|Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes | No |
+|Materialization: Ephemeral|Yes| Yes | No |
+|Seeds|Yes| Yes | Yes |
+|Tests|Yes| Yes | Yes |
+|Snapshots|No| No | No |
+|Documentation| Yes | Yes | Yes |
+|Authentication: LDAP|Yes| Yes | Yes |
+|Authentication: Kerberos|No| No | No |
