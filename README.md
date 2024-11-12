@@ -45,10 +45,10 @@ demo_project:
 |------|-----------|---------|------|
 |Materialization: View|Yes| N/A | N/A |
 |Materialization: Table|Yes| Yes | Yes |
-|Materialization: Table with Partitions |Yes| Yes | No |
+|Materialization: Table with Partitions |Yes| Yes | Yes |
 |Materialization: Incremental - Append|Yes| Yes | Yes |
 |Materialization: Incremental - Append with Partitions |Yes| Yes | No |
-|Materialization: Incremental - Insert+Overwrite |Yes| Yes | Yes |
+|Materialization: Incremental - Insert+Overwrite |Yes| Yes | No |
 |Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes | No |
 |Materialization: Incremental - Merge|No| No | No |
 |Materialization: Ephemeral|Yes| Yes | No |
@@ -66,7 +66,7 @@ demo_project:
 |------|------|---------|------|
 |Materialization: View|Yes| N/A | N/A |
 |Materialization: Table|Yes| Yes | Yes |
-|Materialization: Table with Partitions |Yes| Yes | No |
+|Materialization: Table with Partitions |Yes| Yes | Yes |
 |Materialization: Incremental - Append|Yes| Yes | Yes |
 |Materialization: Incremental - Append with Partitions |Yes| Yes | No |
 |Materialization: Incremental - Insert+Overwrite |Yes| No | No |
