@@ -14,7 +14,12 @@
 
 import pytest
 
-from dbt_common.exceptions import CompilationError, DbtRuntimeError, DbtDatabaseError
+from dbt_common.exceptions import (
+    CompilationError,
+    DbtRuntimeError,
+    DbtDatabaseError,
+    DbtBaseException,
+)
 
 from impala.error import DatabaseError, HttpError, HiveServer2Error
 
@@ -48,12 +53,16 @@ class TestException:
     def test_exception(self):
         with pytest.raises(CompilationError):
             raise_compilation_error(self)
+        assert issubclass(CompilationError, DbtRuntimeError) == True
 
         with pytest.raises(DbtRuntimeError):
             raise_http_error(self)
+        assert issubclass(DbtRuntimeError, DbtBaseException) == True
 
         with pytest.raises(DbtRuntimeError):
             raise_hive_server_error(self)
+        assert issubclass(DbtRuntimeError, RuntimeError) == True
 
         with pytest.raises(DbtDatabaseError):
             raise_database_error(self)
+        assert issubclass(DbtDatabaseError, DbtRuntimeError) == True
