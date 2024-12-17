@@ -89,6 +89,8 @@ class ImpalaCredentials(Credentials):
 
         # set the usage tracking flag
         tracker.usage_tracking = self.usage_tracking
+        # log the initialization message once
+        tracker.log_initial_message()
         # get platform information for tracking
         tracker.populate_platform_info(self, ver)
         # get dbt deployment env information for tracking
