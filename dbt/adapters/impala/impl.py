@@ -294,7 +294,7 @@ class ImpalaAdapter(SQLAdapter):
 
     def _get_one_catalog(self, information_schema, schemas) -> agate.Table:
         if len(schemas) != 1:
-            dbt.exceptions.raise_compiler_error(
+            dbt.exceptions.CompilationError(
                 f"Expected only one schema in ImpalaAdapter._get_one_catalog, found " f"{schemas}"
             )
 
