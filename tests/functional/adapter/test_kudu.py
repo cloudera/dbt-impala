@@ -26,6 +26,8 @@ from dbt.tests.adapter.basic.files import (
     model_incremental,
 )
 
+from dbt.tests.adapter.basic.test_table_materialization import BaseTableMaterialization
+
 pytestmark = pytest.mark.skipif(
     os.getenv(key="DISABLE_KUDU_TEST", default="true") == "true",
     reason="Kudu tests will be run when DISABLE_KUDU_TEST is set to false in test.env",
@@ -106,77 +108,39 @@ class TestIncrementalKudu(BaseIncremental):
         assert len(catalog.sources) == 1
 
 
-insertoverwrite_sql = """
+materialization_hash_partitionby_sql = """
  {{
     config(
-        materialized="incremental",
-        incremental_strategy="insert_overwrite",
-        partition_by="id_partition",
+        materialized="table",
+        partition_by="HASH (id) PARTITIONS 2",
         stored_as="kudu",
         primary_key="(id)"
     )
 }}
- select *, id as id_partition from {{ source('raw', 'seed') }}
- {% if is_incremental() %}
- where id > (select max(id) from {{ this }})
- {% endif %}
+select * from {{ this.schema }}.seed
 """.strip()
 
 
-@pytest.mark.skip(reason="Need to fix partition by syntax for Kudu")
-class TestInsertoverwriteKudu(TestIncrementalKudu):
+class TestMaterializationWithHashPartitionKudu(BaseTableMaterialization):
     @pytest.fixture(scope="class")
     def models(self):
-        return {"incremental_test_model.sql": insertoverwrite_sql, "schema.yml": schema_base_yml}
+        return {"materialized.sql": materialization_hash_partitionby_sql}
 
 
-incremental_single_partitionby_sql = """
+materialization_range_partitionby_sql = """
  {{
     config(
-        materialized="incremental",
-        partition_by="id_partition",
+        materialized="table",
+        partition_by="Range (id) (PARTITION VALUES < 5, PARTITION 5 <= VALUES)",
         stored_as="kudu",
         primary_key="(id)"
     )
 }}
- select *, id as id_partition from {{ source('raw', 'seed') }}
- {% if is_incremental() %}
- where id > (select max(id) from {{ this }})
- {% endif %}
+select * from {{ this.schema }}.seed
 """.strip()
 
 
-@pytest.mark.skip(reason="Need to fix partition by syntax for Kudu")
-class TestIncrementalWithSinglePartitionKeyKudu(TestIncrementalKudu):
+class TestMaterializationWithRangePartitionKudu(BaseTableMaterialization):
     @pytest.fixture(scope="class")
     def models(self):
-        return {
-            "incremental_test_model.sql": incremental_single_partitionby_sql,
-            "schema.yml": schema_base_yml,
-        }
-
-
-incremental_multiple_partitionby_sql = """
- {{
-    config(
-        materialized="incremental",
-        partition_by=["id_partition1", "id_partition2"],
-        stored_as="kudu",
-        primary_key="(id)"
-        )
- }}
- select *, id as id_partition1, id as id_partition2 from {{ source('raw', 'seed') }}
- {% if is_incremental() %}
- where id > (select max(id) from {{ this }})
- {% endif %}
-""".strip()
-
-
-@pytest.mark.skip(reason="Need to fix partition by syntax for Kudu")
-class TestIncrementalWithMultiplePartitionKeyKudu(TestIncrementalKudu):
-    @pytest.fixture(scope="class")
-    def models(self):
-        return {
-            "incremental_test_model.sql": incremental_multiple_partitionby_sql,
-            "schema.yml": schema_base_yml,
-        }
+        return {"materialized.sql": materialization_range_partitionby_sql}
