@@ -20,7 +20,7 @@
     Expected one of: 'append', 'insert_overwrite'
   {%- endset %}
 
-  {% if incremental_strategy not in ['append', 'insert_overwrite'] %}
+  {% if incremental_strategy not in ['append', 'insert_overwrite', 'merge'] %}
     {% do exceptions.raise_compiler_error(invalid_strategy_msg) %}
   {% endif %}
 
@@ -40,8 +40,14 @@
    {% endif %}
 {% endmacro %}
 
-{% macro impala__get_incremental_default_sql(arg_dict) %}
-   {% do return(get_insert_overwrite_sql(arg_dict["target_relation"], arg_dict["temp_relation"], arg_dict["dest_columns"])) %}
+{% macro get_incremental_default_sql(arg_dict) %}
+   {% do return(get_transformation_sql(
+      target = arg_dict["target_relation"],
+      source = arg_dict["temp_relation"],
+      unique_key = arg_dict["unique_key"],
+      dest_columns = arg_dict["dest_columns"],
+      predicates = arg_dict["predicates"],
+    )) %}
 {% endmacro %}
 
 {% materialization incremental, adapter='impala' -%}
@@ -54,20 +60,13 @@
   {%- set backup_relation_type = 'table' if existing_relation is none else existing_relation.type -%}
   {%- set backup_relation = make_backup_relation(target_relation, backup_relation_type) -%}
 
-  -- configs
-  {% set unique_key = config.get('unique_key') %}
-  {% set uniquekey_msg -%}
-    Impala adapter does not support 'unique_key'
-  {%- endset %}
-  {% if unique_key is not none %}
-    {% do exceptions.raise_compiler_error(uniquekey_msg) %}
-  {% endif %}
 
   {% set incremental_strategy = config.get('incremental_strategy') or 'append' %}
   {% if incremental_strategy == None %}
     {% set incremental_strategy = 'append' %}
   {% endif %}
   {% set incremental_strategy = validate_get_incremental_strategy(incremental_strategy) %}
+  {%- set unique_key = config.get('unique_key') -%}
   {%- set full_refresh_mode = (should_full_refresh()  or existing_relation.is_view) -%}
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
 

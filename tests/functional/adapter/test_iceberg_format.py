@@ -27,11 +27,19 @@ from tests.functional.adapter.test_basic import (
     TestIncrementalImpala,
 )
 
+from dbt.tests.adapter.incremental.test_incremental_merge_exclude_columns import (
+    BaseMergeExcludeColumns,
+)
+
 from dbt.tests.adapter.basic.files import (
     model_base,
     model_incremental,
     base_view_sql,
     schema_base_yml,
+)
+
+from tests.functional.adapter.iceberg_files import (
+    merge_iceberg_sql,
 )
 
 
@@ -293,3 +301,9 @@ class TestInsertoverwriteIcebergFormatImpala(TestIncrementalIcebergFormatImpala)
             "incremental_test_model.sql": insertoverwrite_iceberg_sql,
             "schema.yml": schema_base_yml,
         }
+
+
+class TestMergeIcebergHive(BaseMergeExcludeColumns):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {"merge_exclude_columns.sql": merge_iceberg_sql}
