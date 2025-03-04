@@ -17,10 +17,10 @@
 {% macro validate_get_incremental_strategy(incremental_strategy) %}
   {% set invalid_strategy_msg -%}
     Invalid incremental strategy provided: {{ incremental_strategy }}
-    Expected one of: 'append', 'insert_overwrite'
+    Expected one of: 'append', 'insert_overwrite', 'microbatch'
   {%- endset %}
 
-  {% if incremental_strategy not in ['append', 'insert_overwrite'] %}
+  {% if incremental_strategy not in ['append', 'insert_overwrite', 'microbatch'] %}
     {% do exceptions.raise_compiler_error(invalid_strategy_msg) %}
   {% endif %}
 
