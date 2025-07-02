@@ -17,14 +17,29 @@
 {% macro validate_get_incremental_strategy(incremental_strategy) %}
   {% set invalid_strategy_msg -%}
     Invalid incremental strategy provided: {{ incremental_strategy }}
-    Expected one of: 'append', 'insert_overwrite'
+    Expected one of: 'append', 'insert_overwrite', 'microbatch'
   {%- endset %}
 
-  {% if incremental_strategy not in ['append', 'insert_overwrite'] %}
+  {% if incremental_strategy not in ['append', 'insert_overwrite', 'microbatch'] %}
     {% do exceptions.raise_compiler_error(invalid_strategy_msg) %}
   {% endif %}
 
+  {% if incremental_strategy == 'microbatch' %}
+    {{ validate_partition_key_for_microbatch_strategy() }}
+  {%- endif -%}
+
   {% do return(incremental_strategy) %}
+{% endmacro %}
+
+{% macro validate_partition_key_for_microbatch_strategy() %}
+    {% set microbatch_partition_key_missing_msg -%}
+      dbt-impala 'microbatch' incremental strategy requires a `partition_by` config.
+      Ensure you are using a `partition_by` column that is of granularity {{ config.get('batch_size') }}.
+    {%- endset %}
+
+    {%- if not config.get('partition_by') -%}
+      {{ exceptions.raise_compiler_error(microbatch_partition_key_missing_msg) }}
+    {%- endif -%}
 {% endmacro %}
 
 {% macro incremental_validate_on_schema_change(on_schema_change, default='ignore') %}

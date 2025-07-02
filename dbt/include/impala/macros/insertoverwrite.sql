@@ -28,7 +28,7 @@
         {% endif %}
         {{ print("partition_cols_csv = " + partition_cols_csv) }}
 
-        {% if raw_strategy == 'insert_overwrite' %}
+        {% if raw_strategy == 'insert_overwrite' or raw_strategy == 'microbatch' %}
 
             insert overwrite {{ target }} partition({{ partition_cols_csv }})
             (
