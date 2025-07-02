@@ -20,10 +20,6 @@
     {%- set partition_cols = config.get('partition_by', validator=validation.any[list]) -%}
     {%- set dest_cols_csv = dest_columns | map(attribute="name") | join(", ") -%}
 
-     {% if raw_strategy == 'microbatch' %}
-        {{ validate_partition_key_for_microbatch_strategy() }}
-     {%- endif -%}
-
     {% if partition_cols is not none %}
         {% if partition_cols is string %}
             {%- set partition_cols_csv = partition_cols -%}
@@ -59,14 +55,3 @@
     {% endif %}
 
 {%- endmacro %}
-
-{% macro validate_partition_key_for_microbatch_strategy() %}
-    {% set microbatch_partition_key_missing_msg -%}
-      dbt-impala 'microbatch' incremental strategy requires a `partition_by` config.
-      Ensure you are using a `partition_by` column that is of granularity {{ config.get('batch_size') }}.
-    {%- endset %}
-
-    {%- if not config.get('partition_by') -%}
-      {{ exceptions.raise_compiler_error(microbatch_partition_key_missing_msg) }}
-    {%- endif -%}
-{% endmacro %}
