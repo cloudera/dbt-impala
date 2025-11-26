@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-PYTHON_VERSION ?= py38
+PYTHON_VERSION ?= py39
 
 # Define the name of the virtual environment directory
 VENV ?= .venv-dbt-impala
