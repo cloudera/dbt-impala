@@ -65,7 +65,7 @@ setup(
     include_package_data=True,
     install_requires=[
         f"dbt-core~={dbt_core_version}",
-        "impyla==0.18",
+        "impyla==0.22",
         "python-decouple>=3.6",
         # "kerberos>=1.3.0", # Not required per README, doesn't work on Windows
     ],
