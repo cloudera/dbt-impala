@@ -335,9 +335,22 @@ class ImpalaConnectionManager(SQLConnectionManager):
         logger.debug(f"IMPALA VERSION {'ImpalaConnectionManager.impala_version'}")
 
     @classmethod
-    def get_response(cls, cursor):
-        message = "OK"
-        return AdapterResponse(_message=message)
+    def get_response(cls, cursor) -> AdapterResponse:
+        modified_rows, _ = cursor._cursor.rowcounts
+
+        rows = modified_rows
+        if rows == -1:
+            if hasattr(cursor._cursor, "_buffer") and cursor._cursor._buffer:
+                rows = len(cursor._cursor._buffer)
+            else:
+                rows = cursor._cursor.rowcount
+
+        if rows is None or rows == -1:
+            message = "OK"
+        else:
+            message = f"OK ({rows} rows)"
+
+        return AdapterResponse(_message=message, rows_affected=rows)
 
     def cancel(self, connection):
         connection.handle.close()
