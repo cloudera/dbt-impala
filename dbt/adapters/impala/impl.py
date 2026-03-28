@@ -73,7 +73,7 @@ class ImpalaAdapter(SQLAdapter):
         return "string"
 
     def quote(self, identifier):
-        return identifier  # no quote
+        return ".".join(f"`{part}`" for part in identifier.split('.'))
 
     @classmethod
     def convert_number_type(cls, agate_table: agate.Table, col_idx: int) -> str:
