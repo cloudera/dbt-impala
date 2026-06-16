@@ -17,10 +17,27 @@
 {% macro get_insert_overwrite_sql(target, source, dest_columns) -%}
 
     {% set raw_strategy = config.get('incremental_strategy') or 'append' %}
+    {%- set table_type = config.get('table_type') -%}
     {%- set partition_cols = config.get('partition_by', validator=validation.any[list]) -%}
     {%- set dest_cols_csv = dest_columns | map(attribute="name") | join(", ") -%}
 
-    {% if partition_cols is not none %}
+    {% if table_type == 'iceberg' %}
+
+        {% if raw_strategy == 'insert_overwrite' or raw_strategy == 'microbatch' %}
+
+            insert overwrite {{ target }} ({{ dest_cols_csv }})
+            select {{ dest_cols_csv }}
+            from {{ source }}
+
+        {% elif raw_strategy == 'append' %}
+
+            insert into {{ target }} ({{ dest_cols_csv }})
+            select {{ dest_cols_csv }}
+            from {{ source }}
+
+        {% endif %}
+
+    {% elif partition_cols is not none %}
         {% if partition_cols is string %}
             {%- set partition_cols_csv = partition_cols -%}
         {% else %}

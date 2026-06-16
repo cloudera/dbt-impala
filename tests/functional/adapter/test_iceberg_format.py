@@ -127,6 +127,21 @@ select *, id as id_partition1 from {{ source('raw', 'seed') }}
 {% endif %}
 """.strip()
 
+insertoverwrite_transform_iceberg_sql = """
+ {{
+    config(
+        materialized="incremental",
+        incremental_strategy="insert_overwrite",
+        partition_by="truncate(3, name)",
+        table_type="iceberg"
+    )
+}}
+select *, id as id_partition1 from {{ source('raw', 'seed') }}
+{% if is_incremental() %}
+    where id > (select max(id) from {{ this }})
+{% endif %}
+""".strip()
+
 
 # For iceberg table formats, check_relations_equal util is not working as expected
 # Impala upstream issue: https://issues.apache.org/jira/browse/IMPALA-12097
@@ -291,5 +306,14 @@ class TestInsertoverwriteIcebergFormatImpala(TestIncrementalIcebergFormatImpala)
     def models(self):
         return {
             "incremental_test_model.sql": insertoverwrite_iceberg_sql,
+            "schema.yml": schema_base_yml,
+        }
+
+
+class TestInsertoverwriteTransformIcebergFormatImpala(TestIncrementalIcebergFormatImpala):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "incremental_test_model.sql": insertoverwrite_transform_iceberg_sql,
             "schema.yml": schema_base_yml,
         }
