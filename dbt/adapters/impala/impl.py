@@ -112,9 +112,13 @@ class ImpalaAdapter(SQLAdapter):
     def list_relations_without_caching(
         self, schema_relation: ImpalaRelation
     ) -> List[ImpalaRelation]:
+        kwargs = {"schema": schema_relation}
+
         try:
-            kwargs = {"relation": schema_relation}
-            table_relations = self.execute_macro(LIST_TABLES_IN_RELATION_MACRO_NAME, kwargs=kwargs)
+            result_tables = self.execute_macro(
+                "impala__list_tables_without_caching", kwargs=kwargs
+            )
+            result_views = self.execute_macro("impala__list_views_without_caching", kwargs=kwargs)
         except dbt.exceptions.DbtRuntimeError as e:
             errmsg = getattr(e, "msg", "")
             if f"Database does not exist" in errmsg:
@@ -123,19 +127,32 @@ class ImpalaAdapter(SQLAdapter):
                 logger.error(f"Unable to extract tables in relation {schema_relation}: {errmsg}")
                 raise e
 
-        relations = []
-        for table_relation in table_relations:
-            _rel_type = self.fetch_relation_type(table_relation)
-            _identifier = table_relation.identifier
+        result_tables_without_view = []
+        for row in result_tables:
+            # check if this table is view
+            is_view = len(list(filter(lambda x: x["name"] == row["name"], result_views))) == 1
+            if not is_view:
+                result_tables_without_view.append(row)
 
-            relation = self.Relation.create(
-                database=None,
-                schema=schema_relation.schema,
-                identifier=_identifier,
-                type=_rel_type,
-                information=_identifier,
+        relations = []
+
+        for row in result_tables_without_view:
+            relations.append(
+                self.Relation.create(
+                    schema=schema_relation.schema,
+                    identifier=row["name"],
+                    type="table",
+                )
             )
-            relations.append(relation)
+
+        for row in result_views:
+            relations.append(
+                self.Relation.create(
+                    schema=schema_relation.schema,
+                    identifier=row["name"],
+                    type="view",
+                )
+            )
 
         return relations
 
