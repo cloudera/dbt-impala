@@ -218,15 +218,34 @@ class ImpalaAdapter(SQLAdapter):
             for row in raw_rows[0:column_separator_pos]
             if not row["name"].startswith("#") and not row["name"] == ""
         ]
-        # trim the fields so that these are clean key,value pairs and metadata.get() correctly returns the values
-        metadata = {
-            col["name"].split(":")[0].strip(): col["type"].strip()
-            for col in raw_rows[table_separator_pos + 1 :]
-            if col["name"]
-            and not col["name"].startswith("#")
-            and not col["name"] == ""
-            and col["type"]
-        }
+
+        # Build metadata from DESCRIBE EXTENDED detail rows.
+        # Impala/Hive may put values in `type` OR `comment`, and table properties often appear as continuous rows with an empty `name`.
+        metadata: Dict[str, str] = {}
+        for col in raw_rows[table_separator_pos + 1 :]:
+            col_dict = dict(zip(col._keys, col._values))
+            name = (col_dict.get("name") or "").strip()
+            if name.startswith("#"):
+                continue
+
+            type_val = (col_dict.get("type") or "").strip()
+            comment_val = (col_dict.get("comment") or "").strip()
+
+            if name:
+                key = name.split(":")[0].strip()
+                if not key:
+                    continue
+                value = type_val or comment_val
+            else:
+                key = type_val
+                value = comment_val
+
+            if not key or not value:
+                continue
+            if value.upper() == "NULL":
+                continue
+
+            metadata[key] = value
 
         raw_table_stats = metadata.get(KEY_TABLE_STATISTICS)
         table_stats = ImpalaColumn.convert_table_stats(raw_table_stats)
@@ -242,6 +261,8 @@ class ImpalaAdapter(SQLAdapter):
                 column=column["name"],
                 column_index=idx,
                 dtype=column["type"],
+                comment=column.get("comment"),
+                table_comment=metadata.get("comment"),
             )
             for idx, column in enumerate(rows)
         ]
@@ -343,6 +364,8 @@ class ImpalaAdapter(SQLAdapter):
             as_dict["column_name"] = as_dict.pop("column", None)
             as_dict["column_type"] = as_dict.pop("dtype")
             as_dict["table_database"] = None
+            as_dict["column_comment"] = column.comment
+            as_dict["table_comment"] = column.table_comment
 
             yield as_dict
 
