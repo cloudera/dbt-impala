@@ -30,6 +30,8 @@ class ImpalaColumn(dbtClassMixin, Column):
     table_owner: Optional[str] = None
     table_stats: Optional[Dict[str, Any]] = None
     column_index: Optional[int] = None
+    comment: Optional[str] = None
+    table_comment: Optional[str] = None
 
     @classmethod
     def translate_type(cls, dtype: str) -> str:

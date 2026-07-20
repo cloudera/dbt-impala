@@ -239,6 +239,57 @@
   {% endcall %}
 {% endmacro %}
 
+{# Escape single quotes and truncate comments to 256 characters, as Impala has a limit. #}
+{% macro impala__truncate_and_escape_comment(comment, max_length=256) -%}
+  {%- if not comment -%}
+    {{ return(none) }}
+  {%- endif -%}
+
+  {%- set escaped_comment = comment | replace("'", "\\'") -%}
+
+  {%- if escaped_comment | length > max_length -%}
+    {%- do exceptions.warn("Impala comments are limited to " ~ max_length ~ " characters. Truncating comment for " ~ this) -%}
+    {{ return(escaped_comment[:max_length]) }}
+  {%- else -%}
+    {{ return(escaped_comment) }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro impala__persist_docs(relation, model, for_relation, for_columns) -%}
+  {%- if for_relation and config.persist_relation_docs() and model.description -%}
+    {%- do impala__alter_relation_comment(relation, model.description) -%}
+  {%- endif -%}
+
+  {%- if for_columns and config.persist_column_docs() and model.columns -%}
+    {%- set existing_columns = adapter.get_columns_in_relation(relation) | map(attribute="name") | list -%}
+    {%- set filtered_columns = validate_doc_columns(relation, model.columns, existing_columns) -%}
+    {%- do impala__alter_column_comment(relation, filtered_columns) -%}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro impala__alter_relation_comment(relation, relation_comment) -%}
+  {% set escaped_comment = impala__truncate_and_escape_comment(relation_comment) %}
+  {% if escaped_comment %}
+    {% set object_type = 'view' if relation.type == 'view' else 'table' %}
+    {% call statement('alter_relation_comment') %}
+        comment on {{ object_type }} {{ relation }} is '{{ escaped_comment }}'
+    {% endcall %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro impala__alter_column_comment(relation, column_dict) -%}
+  {% for column_name, column_info in column_dict.items() %}
+    {% set comment = column_info.get('description') %}
+    {% set escaped_comment = impala__truncate_and_escape_comment(comment) %}
+    {% if escaped_comment %}
+      {% set quoted_column = adapter.quote(column_name) if column_info.get('quote') else column_name %}
+      {% call statement('alter_column_comment_' ~ column_name) %}
+            comment on column {{ relation }}.{{ quoted_column }} is '{{ escaped_comment }}'
+      {% endcall %}
+    {% endif %}
+  {% endfor %}
+{%- endmacro %}
+
 {% macro is_relation_present(relation) -%}
   {% set result_set = run_query('show tables in ' ~ relation.schema ~ ' like "' ~ relation.identifier.lower() ~ '"') %}
 
