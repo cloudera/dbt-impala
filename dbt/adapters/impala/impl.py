@@ -26,11 +26,19 @@ from dbt_common.clients.agate_helper import ColumnTypeBuilder, NullableAgateType
 from dbt.adapters.events.logging import AdapterLogger
 from dbt_common.utils import executor
 from dbt.adapters.contracts.relation import RelationConfig
+from dbt.adapters.base.impl import ConstraintSupport
+from dbt_common.contracts.constraints import ConstraintType
 
 import dbt.adapters.impala.cloudera_tracking as tracker
 from dbt.adapters.impala import ImpalaConnectionManager
 from dbt.adapters.impala.column import ImpalaColumn
 from dbt.adapters.impala.relation import ImpalaRelation
+
+from typing import Optional
+from dbt_common.contracts.constraints import (
+    ModelLevelConstraint,
+    ConstraintType,
+)
 
 logger = AdapterLogger("Impala")
 
@@ -52,6 +60,29 @@ class ImpalaAdapter(SQLAdapter):
     INFORMATION_OWNER_REGEX = re.compile(r"^Owner: (.*)$", re.MULTILINE)
     INFORMATION_STATISTICS_REGEX = re.compile(r"^Statistics: (.*)$", re.MULTILINE)
 
+    CONSTRAINT_SUPPORT = {
+        ConstraintType.check: ConstraintSupport.NOT_SUPPORTED,
+        ConstraintType.not_null: ConstraintSupport.NOT_SUPPORTED,
+        ConstraintType.unique: ConstraintSupport.NOT_SUPPORTED,
+        ConstraintType.primary_key: ConstraintSupport.ENFORCED,
+        ConstraintType.foreign_key: ConstraintSupport.ENFORCED,
+    }
+
+    @classmethod
+    def render_model_constraint(cls, constraint: ModelLevelConstraint) -> Optional[str]:
+        column_list = ", ".join(constraint.columns)
+
+        if constraint.type == ConstraintType.primary_key:
+            return f"PRIMARY KEY ({column_list})"
+        elif constraint.type == ConstraintType.foreign_key:
+            if constraint.to and constraint.to_columns:
+                refs = ", ".join(constraint.to_columns)
+                return f"FOREIGN KEY ({column_list}) " f"REFERENCES {constraint.to} ({refs})"
+            elif constraint.expression:
+                return f"FOREIGN KEY ({column_list}) " f"REFERENCES {constraint.expression}"
+
+        return super().render_model_constraint(constraint)
+
     @classmethod
     def date_function(cls):
         return "now()"
@@ -72,8 +103,9 @@ class ImpalaAdapter(SQLAdapter):
     def convert_text_type(cls, agate_table: agate.Table, col_idx: int) -> str:
         return "string"
 
+    @classmethod
     def quote(self, identifier):
-        return identifier  # no quote
+        return f"`{identifier}`"
 
     @classmethod
     def convert_number_type(cls, agate_table: agate.Table, col_idx: int) -> str:
