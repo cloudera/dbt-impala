@@ -170,50 +170,68 @@
   {% do return(load_result('list_views_without_caching').table) %}
 {% endmacro %}
 
-{% macro impala__create_table_as(temporary, relation, sql) -%}
-
-  {%- set sql_header = config.get('sql_header', none) -%}
-  {%- set is_external = config.get('external') -%}
+{% macro impala__table_option_clauses() -%}
   {%- set table_type = config.get('table_type') -%}
   {%- set stored_as = config.get('stored_as', none) -%}
+  {{ ct_option_primary_key(label="PRIMARY KEY") }}
+  {% if table_type == 'iceberg' -%}
+    {{ ct_option_partition_cols(label="partitioned by spec") }}
+  {% else %}
+    {% if stored_as == 'kudu' -%}
+      {{ ct_option_kudu_partition_cols(label="partition by") }}
+    {% else %}
+      {{ ct_option_partition_cols(label="partitioned by") }}
+    {%- endif %}
+  {%- endif %}
+  {{ ct_option_sort_cols(label="sort by") }}
+  {{ ct_option_comment_relation(label="comment") }}
+  {{ ct_option_row_format(label="row format") }}
+  {{ ct_option_with_serdeproperties(label="with serdeproperties") }}
+  {%- if table_type == 'iceberg' -%} STORED BY ICEBERG {%- endif -%}
+  {{ ct_option_stored_as(label="stored as") }}
+  {{ ct_option_location_clause(label="location") }}
+  {{ ct_option_cached_in(label="cached in") }}
+  {{ ct_option_tbl_properties(label="tblproperties") }}
+{%- endmacro %}
+
+{% macro impala__create_table_as(temporary, relation, sql) -%}
+  {%- set sql_header = config.get('sql_header', none) -%}
+  {%- set contract_config = config.get('contract') -%}
+  {%- set is_external = config.get('external') -%}
 
   {{ sql_header if sql_header is not none }}
 
-  create {% if is_external == true -%}external{%- endif %} table
-    {{ relation.include(schema=true) }}
-    {{ ct_option_primary_key(label="PRIMARY KEY") }}
-    {% if table_type == 'iceberg' -%}
-      {{ ct_option_partition_cols(label="partitioned by spec") }}
-    {% else %}
-      {% if stored_as == 'kudu' -%}
-        {{ ct_option_kudu_partition_cols(label="partition by") }}
-      {% else %}
-        {{ ct_option_partition_cols(label="partitioned by") }}
-      {%- endif %}
-    {%- endif %}
-    {{ ct_option_sort_cols(label="sort by") }}
-    {{ ct_option_comment_relation(label="comment") }}
-    {{ ct_option_row_format(label="row format") }}
-    {{ ct_option_with_serdeproperties(label="with serdeproperties") }}
-    {%- if table_type == 'iceberg' -%} STORED BY ICEBERG {%- endif -%}
-    {{ ct_option_stored_as(label="stored as") }}
-    {{ ct_option_location_clause(label="location") }}
-    {{ ct_option_cached_in(label="cached in") }}
-    {{ ct_option_tbl_properties(label="tblproperties") }}
-  as
+  {%- if contract_config.enforced and (not temporary) -%}
+    {{ get_assert_columns_equivalent(sql) }}
+    {%- set sql = get_select_subquery(sql) %}
+    create {% if is_external == true -%}external{%- endif %} table
+      {{ relation.include(schema=true) }}
+      {{ get_table_columns_and_constraints() }}
+      {{ impala__table_option_clauses() }}
+    ;
+    insert into {{ relation.include(schema=true) }}
     {{ sql }}
+  {%- else -%}
+    create {% if is_external == true -%}external{%- endif %} table
+      {{ relation.include(schema=true) }}
+      {{ impala__table_option_clauses() }}
+    as
+      {{ sql }}
+  {%- endif -%}
 {%- endmacro %}
 
 {% macro impala__create_view_as(relation, sql) -%}
-
   {%- set sql_header = config.get('sql_header', none) -%}
-  {%- set backup = config.get('backup') -%}
+  {%- set contract_config = config.get('contract') -%}
 
   {{ sql_header if sql_header is not none }}
 
   create view
     {{ relation.include(schema=True) }}
     {{ ct_option_comment_relation(label="comment") }}
+  {%- if contract_config.enforced -%}
+    {{ get_assert_columns_equivalent(sql) }}
+  {%- endif %}
   as
     {{ sql }}
 {%- endmacro %}
@@ -245,7 +263,7 @@
     {{ return(none) }}
   {%- endif -%}
 
-  {%- set escaped_comment = comment | replace("'", "\\'") -%}
+  {%- set escaped_comment = comment | replace("'", "\\'") | replace(";", ":") -%}
 
   {%- if escaped_comment | length > max_length -%}
     {%- do exceptions.warn("Impala comments are limited to " ~ max_length ~ " characters. Truncating comment for " ~ this) -%}
