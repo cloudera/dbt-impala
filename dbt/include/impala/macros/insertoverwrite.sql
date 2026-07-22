@@ -21,23 +21,7 @@
     {%- set partition_cols = config.get('partition_by', validator=validation.any[list]) -%}
     {%- set dest_cols_csv = dest_columns | map(attribute="name") | join(", ") -%}
 
-    {% if table_type == 'iceberg' %}
-
-        {% if raw_strategy == 'insert_overwrite' or raw_strategy == 'microbatch' %}
-
-            insert overwrite {{ target }} ({{ dest_cols_csv }})
-            select {{ dest_cols_csv }}
-            from {{ source }}
-
-        {% elif raw_strategy == 'append' %}
-
-            insert into {{ target }} ({{ dest_cols_csv }})
-            select {{ dest_cols_csv }}
-            from {{ source }}
-
-        {% endif %}
-
-    {% elif partition_cols is not none %}
+    {% if partition_cols is not none and table_type != 'iceberg' %}
         {% if partition_cols is string %}
             {%- set partition_cols_csv = partition_cols -%}
         {% else %}
@@ -62,6 +46,12 @@
             )
 
         {% endif %}
+    {% elif table_type == 'iceberg' and (raw_strategy == 'insert_overwrite' or raw_strategy == 'microbatch') %}
+
+        insert overwrite {{ target }} ({{ dest_cols_csv }})
+        select {{ dest_cols_csv }}
+        from {{ source }}
+
     {% else %}
 
         insert into {{ target }} ({{ dest_cols_csv }})
