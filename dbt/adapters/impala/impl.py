@@ -29,7 +29,6 @@ from dbt.adapters.contracts.relation import RelationConfig
 from dbt.adapters.base.impl import ConstraintSupport
 from dbt_common.contracts.constraints import ConstraintType
 
-import dbt.adapters.impala.cloudera_tracking as tracker
 from dbt.adapters.impala import ImpalaConnectionManager
 from dbt.adapters.impala.column import ImpalaColumn
 from dbt.adapters.impala.relation import ImpalaRelation
@@ -415,11 +414,6 @@ class ImpalaAdapter(SQLAdapter):
             username = self.config.credentials.username
             if not username:  # username is not available when auth_type is insecure or kerberos
                 logger.debug("No username available to fetch permissions")
-                payload = {
-                    "event_type": tracker.TrackingEventType.DEBUG,
-                    "permissions": "NA",
-                }
-                tracker.track_usage(payload)
             else:
                 sql_query = "show grant user `" + username + "` on server"
                 _, table = self.execute(sql_query, True, True)
@@ -431,12 +425,8 @@ class ImpalaAdapter(SQLAdapter):
                     permissions_object.append(OrderedDict(zip(row.keys(), values)))
 
                 permissions_json = permissions_object
+                logger.debug(f"User permission dump {permissions_json}")
 
-                payload = {
-                    "event_type": tracker.TrackingEventType.DEBUG,
-                    "permissions": permissions_json,
-                }
-                tracker.track_usage(payload)
         except Exception as ex:
             logger.error(f"Failed to fetch permissions for user: {username}. Exception: {ex}")
 

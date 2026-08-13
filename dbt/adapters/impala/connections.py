@@ -39,9 +39,6 @@ from impala.error import DatabaseError
 from impala.error import HttpError
 from impala.error import HiveServer2Error
 
-import dbt.adapters.impala.__version__ as ver
-import dbt.adapters.impala.cloudera_tracking as tracker
-
 import json
 
 from dbt.adapters.impala.__version__ import version as ADAPTER_VERSION
@@ -66,7 +63,6 @@ class ImpalaCredentials(Credentials):
     use_http_transport: Optional[bool] = True
     use_ssl: Optional[bool] = True
     http_path: Optional[str] = ""  # for supporting a knox proxy in ldap env
-    usage_tracking: Optional[bool] = True  # usage tracking is enabled by default
     retries: Optional[int] = DEFAULT_MAX_RETRIES
 
     _ALIASES = {"dbname": "database", "pass": "password", "user": "username"}
@@ -88,15 +84,6 @@ class ImpalaCredentials(Credentials):
                 f" schema."
             )
         self.database = None
-
-        # set the usage tracking flag
-        tracker.usage_tracking = self.usage_tracking
-        # get platform information for tracking
-        tracker.populate_platform_info(self, ver)
-        # get dbt deployment env information for tracking
-        tracker.populate_dbt_deployment_env_info()
-        # generate unique ids for tracking
-        tracker.populate_unique_ids(self)
 
     @property
     def type(self):
@@ -163,8 +150,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
     def __init__(self, profile: AdapterRequiredConfig, mp_context: SpawnContext):
         super().__init__(profile, mp_context)
-        # generate profile related object for instrumentation.
-        tracker.generate_profile_info(self)
 
     @contextmanager
     def exception_handler(self, sql: str):
@@ -196,8 +181,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
         credentials = connection.credentials
         connection_ex = None
 
-        auth_type = "insecure"
-
         try:
             connection_start_time = time.time()
             # the underlying dbapi supports retries, so this is directly used instead to support retries
@@ -218,7 +201,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     retries=credentials.retries,
                     user_agent=custom_user_agent,
                 )
-                auth_type = "ldap"
             elif (
                 credentials.auth_type == "GSSAPI"
                 or credentials.auth_type == "gssapi"
@@ -233,7 +215,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     use_ssl=credentials.use_ssl,
                     retries=credentials.retries,
                 )
-                auth_type = "kerberos"
             elif (
                 credentials.auth_type == "PLAIN" or credentials.auth_type == "plain"
             ):  # plain type connection
@@ -246,7 +227,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     password=credentials.password,
                     retries=credentials.retries,
                 )
-                auth_type = "plain"
             else:  # default, insecure connection
                 handle = impala.dbapi.connect(
                     host=credentials.host,
@@ -266,18 +246,12 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection.handle = None
             connection_end_time = time.time()
 
-        # track usage
-        payload = {
-            "event_type": tracker.TrackingEventType.OPEN,
-            "auth": auth_type,
-            "connection_state": connection.state,
-            "elapsed_time": f"{connection_end_time - connection_start_time:.2f}",
-        }
+        logger.debug(
+            f"Open connection elapsed time is: {connection_end_time - connection_start_time:.2f}"
+        )
 
         if connection.state == ConnectionState.FAIL:
-            payload["connection_exception"] = f"{connection_ex}"
-
-        tracker.track_usage(payload)
+            raise connection_ex
 
         return connection
 
@@ -292,15 +266,9 @@ class ImpalaConnectionManager(SQLConnectionManager):
             connection = super().close(connection)
             connection_close_end_time = time.time()
 
-            payload = {
-                "event_type": tracker.TrackingEventType.CLOSE,
-                "connection_state": ConnectionState.CLOSED,
-                "elapsed_time": "{:.2f}".format(
-                    connection_close_end_time - connection_close_start_time
-                ),
-            }
-
-            tracker.track_usage(payload)
+            logger.debug(
+                f"Connection close time is: {connection_close_end_time - connection_close_start_time}"
+            )
 
             return connection
         except Exception as err:
@@ -320,17 +288,10 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             ImpalaConnectionManager.impala_version = res[0][0].split("RELEASE")[0].strip()
 
-            tracker.populate_warehouse_info(
-                {"version": ImpalaConnectionManager.impala_version, "build": res[0][0]}
-            )
         except Exception as ex:
             # we couldn't get the impala warehouse version
             logger.debug(f"Cannot get impala version. Error: {ex}")
             ImpalaConnectionManager.impala_version = "NA"
-
-            tracker.populate_warehouse_info(
-                {"version": ImpalaConnectionManager.impala_version, "build": "NA"}
-            )
 
         logger.debug(f"IMPALA VERSION {'ImpalaConnectionManager.impala_version'}")
 
@@ -379,12 +340,10 @@ class ImpalaConnectionManager(SQLConnectionManager):
             self.begin()
         fire_event(ConnectionUsed(conn_type=self.TYPE, conn_name=connection.name))
 
-        additional_info = {}
         if self.query_header:
             try:
-                additional_info = json.loads(self.query_header.comment.query_comment.strip())
+                json.loads(self.query_header.comment.query_comment.strip())
             except Exception as ex:  # silently ignore error for parsing
-                additional_info = {}
                 logger.debug(f"Unable to get query header {ex}")
 
         with self.exception_handler(sql):
@@ -392,21 +351,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
                 log_sql = f"{sql[:512]}..."
             else:
                 log_sql = sql
-
-            # track usage
-            payload = {
-                "event_type": tracker.TrackingEventType.START_QUERY,
-                "sql": log_sql,
-                "profile_name": self.profile.profile_name,
-            }
-
-            for key, value in additional_info.items():
-                if key == "node_id":
-                    payload["model_name"] = value
-                else:
-                    payload[key] = value
-
-            tracker.track_usage(payload)
 
             fire_event(SQLQuery(conn_name=connection.name, sql=log_sql))
             pre = time.time()
@@ -434,16 +378,6 @@ class ImpalaConnectionManager(SQLConnectionManager):
                 query_exception = ex
 
             elapsed_time = time.time() - pre
-
-            payload = {
-                "event_type": tracker.TrackingEventType.END_QUERY,
-                "sql": log_sql,
-                "elapsed_time": f"{elapsed_time:.2f}",
-                "status": query_status,
-                "profile_name": self.profile.profile_name,
-            }
-
-            tracker.track_usage(payload)
 
             # re-raise query exception so that it propogates to dbt
             if query_exception:
