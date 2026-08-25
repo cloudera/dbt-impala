@@ -28,6 +28,8 @@ def dbt_profile_target(request):
         target = dwx_target()
     elif profile_type == "local_endpoint":
         target = local_target()
+    elif profile_type == "jwt_endpoint":
+        target = jwt_target()
     else:
         raise ValueError(f"Invalid profile type '{profile_type}'")
     return target
@@ -57,6 +59,22 @@ def dwx_target():
         "schema": os.getenv("IMPALA_SCHEMA") or "dbt_adapter_test",
         "user": os.getenv("IMPALA_USER"),
         "password": os.getenv("IMPALA_PASSWORD"),
+        "http_path": os.getenv("IMPALA_HTTP_PATH") or "cliservice",
+    }
+
+
+def jwt_target():
+    return {
+        "type": "impala",
+        "threads": 4,
+        "auth_type": "jwt",
+        "use_http_transport": True,
+        "use_ssl": True,
+        "host": os.getenv("IMPALA_HOST"),
+        "port": int(os.getenv("IMPALA_PORT")),
+        "user": os.getenv("IMPALA_USER"),
+        "schema": os.getenv("IMPALA_SCHEMA") or "dbt_adapter_test",
+        "jwt": os.getenv("IMPALA_JWT"),
         "http_path": os.getenv("IMPALA_HTTP_PATH") or "cliservice",
     }
 
