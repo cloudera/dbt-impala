@@ -61,6 +61,7 @@ class ImpalaCredentials(Credentials):
     auth_type: Optional[str] = None
     kerberos_service_name: Optional[str] = None
     use_http_transport: Optional[bool] = True
+    jwt: Optional[str] = None
     use_ssl: Optional[bool] = True
     http_path: Optional[str] = ""  # for supporting a knox proxy in ldap env
     retries: Optional[int] = DEFAULT_MAX_RETRIES
@@ -225,6 +226,17 @@ class ImpalaConnectionManager(SQLConnectionManager):
                     use_ssl=credentials.use_ssl,
                     user=credentials.username,
                     password=credentials.password,
+                    retries=credentials.retries,
+                )
+            elif credentials.auth_type and credentials.auth_type.lower() == "jwt":
+                handle = impala.dbapi.connect(
+                    host=credentials.host,
+                    port=credentials.port,
+                    auth_mechanism="JWT",
+                    jwt=credentials.jwt,
+                    use_http_transport=True,  # required by impyla for JWT
+                    use_ssl=credentials.use_ssl,
+                    http_path=credentials.http_path,
                     retries=credentials.retries,
                 )
             else:  # default, insecure connection
