@@ -15,6 +15,8 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+import sqlparse
+
 import time
 import dbt.exceptions
 
@@ -48,6 +50,15 @@ DEFAULT_IMPALA_PORT = 21050
 DEFAULT_MAX_RETRIES = 3
 
 logger = AdapterLogger("Impala")
+
+
+def _split_sql_statements(sql: str) -> list[str]:
+    """Split SQL with sqlparse, preserving comments and quoted text.
+
+    Remove trailing semicolons and discard empty results.
+    """
+    statements = sqlparse.split(sql, strip_semicolon=True)
+    return [statement for statement in statements if statement]
 
 
 @dataclass
@@ -375,7 +386,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             configuration = {"paramstyle": "format"}
             query_exception = None
             try:
-                statements = [stmt.strip() for stmt in sql.split(";") if stmt.strip()]
+                statements = _split_sql_statements(sql)
                 if len(statements) > 1:
                     logger.debug(
                         f"Detected multiple SQL statements ({len(statements)}), executing sequentially."
