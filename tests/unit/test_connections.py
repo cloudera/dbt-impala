@@ -113,9 +113,7 @@ class TestImpalaJwtAuthentication:
 
     @patch.object(ImpalaConnectionManager, "fetch_impala_version")
     @patch("dbt.adapters.impala.connections.impala.dbapi.connect")
-    def test_jwt_open_uses_correct_connect_kwargs(
-        self, mock_connect, _mock_fetch_version
-    ):
+    def test_jwt_open_uses_correct_connect_kwargs(self, mock_connect, _mock_fetch_version):
         mock_connect.return_value = MagicMock()
         credentials = ImpalaCredentials.from_dict(JWT_PROFILE)
         connection = _make_connection(credentials)
