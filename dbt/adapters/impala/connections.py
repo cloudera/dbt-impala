@@ -15,6 +15,8 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+import sqlparse
+
 import time
 import dbt.exceptions
 
@@ -27,7 +29,11 @@ from dbt.adapters.contracts.connection import AdapterRequiredConfig
 from typing import Optional, Tuple, Any
 from multiprocessing.context import SpawnContext
 
-from dbt.adapters.contracts.connection import Connection, AdapterResponse, ConnectionState
+from dbt.adapters.contracts.connection import (
+    Connection,
+    AdapterResponse,
+    ConnectionState,
+)
 
 from dbt_common.events.functions import fire_event
 from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
@@ -48,6 +54,15 @@ DEFAULT_IMPALA_PORT = 21050
 DEFAULT_MAX_RETRIES = 3
 
 logger = AdapterLogger("Impala")
+
+
+def _split_sql_statements(sql: str) -> list[str]:
+    """Split SQL with sqlparse, preserving comments and quoted text.
+
+    Remove trailing semicolons and discard empty results.
+    """
+    statements = sqlparse.split(sql, strip_semicolon=True)
+    return [statement for statement in statements if statement]
 
 
 @dataclass
@@ -159,7 +174,9 @@ class ImpalaConnectionManager(SQLConnectionManager):
         except HttpError as httpError:
             logger.debug(f"Authorization error: {httpError}")
             raise dbt.exceptions.DbtRuntimeError(
-                "HTTP Authorization error: " + str(httpError) + ", please check your credentials"
+                "HTTP Authorization error: "
+                + str(httpError)
+                + ", please check your credentials"
             )
         except HiveServer2Error as servError:
             logger.debug(f"Server connection error: {servError}")
@@ -298,7 +315,9 @@ class ImpalaConnectionManager(SQLConnectionManager):
 
             res = cursor.fetchall()
 
-            ImpalaConnectionManager.impala_version = res[0][0].split("RELEASE")[0].strip()
+            ImpalaConnectionManager.impala_version = (
+                res[0][0].split("RELEASE")[0].strip()
+            )
 
         except Exception as ex:
             # we couldn't get the impala warehouse version
@@ -375,7 +394,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             configuration = {"paramstyle": "format"}
             query_exception = None
             try:
-                statements = [stmt.strip() for stmt in sql.split(";") if stmt.strip()]
+                statements = _split_sql_statements(sql)
                 if len(statements) > 1:
                     logger.debug(
                         f"Detected multiple SQL statements ({len(statements)}), executing sequentially."
