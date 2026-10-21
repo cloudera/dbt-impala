@@ -374,7 +374,17 @@ class ImpalaAdapter(SQLAdapter):
         relation_list = self.list_relations(None, schema)
 
         for relation in relation_list:
-            columns.extend(self._get_columns_for_catalog(relation))
+            try:
+                columns.extend(self._get_columns_for_catalog(relation))
+            except dbt.exceptions.DbtRuntimeError as exc:
+                message = str(getattr(exc, "msg", exc))
+                if "Could not load table" in message or "File does not exist" in message:
+                    logger.warning(
+                        f"Skipping catalog for {schema}.{relation.identifier}: "
+                        "Iceberg metadata is missing"
+                    )
+                    continue
+                raise
 
         if len(columns) > 0:
             text_types = agate_helper.build_type_tester(
