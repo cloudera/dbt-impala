@@ -380,8 +380,7 @@ class ImpalaAdapter(SQLAdapter):
                 message = str(getattr(exc, "msg", exc))
                 if "Could not load table" in message or "File does not exist" in message:
                     logger.warning(
-                        f"Skipping catalog for {schema}.{relation.identifier}: "
-                        "Iceberg metadata is missing"
+                        f"Skipping catalog for {schema}.{relation.identifier}: {message}"
                     )
                     continue
                 raise
