@@ -48,9 +48,35 @@
         {% endif %}
     {% elif table_type == 'iceberg' and (raw_strategy == 'insert_overwrite' or raw_strategy == 'microbatch') %}
 
-        insert overwrite {{ target }} ({{ dest_cols_csv }})
-        select {{ dest_cols_csv }}
-        from {{ source }}
+        {#
+          Impala INSERT OVERWRITE on Iceberg replaces every data file in the
+          table. When partition_by is set, replace only the partitions present
+          in the incoming batch, then insert those rows.
+        #}
+        {% if partition_cols %}
+            {% if partition_cols is string %}
+                {% set partition_exprs = [partition_cols] %}
+            {% else %}
+                {% set partition_exprs = partition_cols %}
+            {% endif %}
+            {% set partition_sql = partition_exprs | join(', ') %}
+
+            delete from {{ target }}
+            where ({{ partition_sql }}) in (
+                select distinct {{ partition_sql }}
+                from {{ source }}
+            );
+
+            insert into {{ target }} ({{ dest_cols_csv }})
+            select {{ dest_cols_csv }}
+            from {{ source }}
+        {% else %}
+
+            insert overwrite {{ target }} ({{ dest_cols_csv }})
+            select {{ dest_cols_csv }}
+            from {{ source }}
+
+        {% endif %}
 
     {% else %}
 

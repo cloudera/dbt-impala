@@ -469,4 +469,4 @@ class ImpalaAdapter(SQLAdapter):
         """The set of standard builtin strategies which this adapter supports out-of-the-box.
         Not used to validate custom strategies defined by end users.
         """
-        return ["append", "insert_overwrite"]
+        return ["append", "insert_overwrite", "microbatch"]
