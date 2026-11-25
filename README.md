@@ -11,7 +11,7 @@ The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along 
 
 ### Requirements
 
-Current version of dbt-impala uses dbt-core 1.11.*. We are actively working on supporting the next available version of dbt-core.
+Current version of dbt-impala uses dbt-core 1.12.*. We are actively working on supporting the next available version of dbt-core.
 
 Python >= 3.10
 dbt-core == 1.12.*
