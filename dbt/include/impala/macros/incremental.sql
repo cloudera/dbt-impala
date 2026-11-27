@@ -17,10 +17,10 @@
 {% macro validate_get_incremental_strategy(incremental_strategy) %}
   {% set invalid_strategy_msg -%}
     Invalid incremental strategy provided: {{ incremental_strategy }}
-    Expected one of: 'append', 'insert_overwrite', 'microbatch'
+    Expected one of: 'append', 'insert_overwrite', 'microbatch', 'merge'
   {%- endset %}
 
-  {% if incremental_strategy not in ['append', 'insert_overwrite', 'microbatch'] %}
+  {% if incremental_strategy not in ['append', 'insert_overwrite', 'microbatch', 'merge'] %}
     {% do exceptions.raise_compiler_error(invalid_strategy_msg) %}
   {% endif %}
 
@@ -28,7 +28,57 @@
     {{ validate_partition_key_for_microbatch_strategy() }}
   {%- endif -%}
 
+  {% if incremental_strategy == 'merge' %}
+    {{ validate_merge_strategy() }}
+  {%- endif -%}
+
   {% do return(incremental_strategy) %}
+{% endmacro %}
+
+{% macro validate_merge_strategy() %}
+  {#-
+    Impala can only modify Iceberg (MERGE) and Kudu (UPSERT) tables.
+    Plain Hive/Parquet tables cannot use merge.
+  -#}
+  {%- set table_type = config.get('table_type') -%}
+  {%- set stored_as = config.get('stored_as') -%}
+  {%- set is_iceberg = table_type == 'iceberg' -%}
+  {%- set is_kudu = stored_as == 'kudu' -%}
+
+  {%- if not is_iceberg and not is_kudu -%}
+    {% do exceptions.raise_compiler_error(
+      "dbt-impala 'merge' requires table_type='iceberg' (format-version 2) "
+      ~ "or stored_as='kudu'. Impala cannot MERGE/UPSERT plain Hive/Parquet tables."
+    ) %}
+  {%- endif -%}
+
+  {%- if is_iceberg -%}
+    {%- set props = config.get('tbl_properties') -%}
+    {%- set props_str = props | string | lower if props is not none else '' -%}
+    {%- set is_v2 = (
+          "format-version'='2'" in props_str
+          or 'format-version"="2"' in props_str
+          or "format-version=2" in props_str
+        ) -%}
+    {%- if not is_v2 -%}
+      {% do exceptions.raise_compiler_error(
+        "dbt-impala Iceberg 'merge' requires format-version 2 via "
+        ~ "tbl_properties=\"('format-version'='2')\". Impala rejects MERGE on Iceberg v1."
+      ) %}
+    {%- endif -%}
+  {%- endif -%}
+
+  {%- if is_kudu and config.get('primary_key') is none -%}
+    {% do exceptions.raise_compiler_error(
+      "dbt-impala Kudu 'merge' requires a `primary_key` config (Kudu upsert key)."
+    ) %}
+  {%- endif -%}
+
+  {%- if config.get('unique_key') is none -%}
+    {% do exceptions.raise_compiler_error(
+      "dbt-impala 'merge' incremental strategy requires a `unique_key` config."
+    ) %}
+  {%- endif -%}
 {% endmacro %}
 
 {% macro validate_partition_key_for_microbatch_strategy() %}
@@ -71,18 +121,19 @@
 
   -- configs
   {% set unique_key = config.get('unique_key') %}
-  {% set uniquekey_msg -%}
-    Impala adapter does not support 'unique_key'
-  {%- endset %}
-  {% if unique_key is not none %}
-    {% do exceptions.raise_compiler_error(uniquekey_msg) %}
-  {% endif %}
 
   {% set incremental_strategy = config.get('incremental_strategy') or 'append' %}
   {% if incremental_strategy == None %}
     {% set incremental_strategy = 'append' %}
   {% endif %}
   {% set incremental_strategy = validate_get_incremental_strategy(incremental_strategy) %}
+
+  {% if unique_key is not none and incremental_strategy != 'merge' %}
+    {% do exceptions.raise_compiler_error(
+      "dbt-impala only supports `unique_key` with incremental_strategy='merge'."
+    ) %}
+  {% endif %}
+
   {%- set full_refresh_mode = (should_full_refresh()  or existing_relation.is_view) -%}
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
 
@@ -126,8 +177,19 @@
 
     {#-- Get the incremental_strategy, the macro to use for the strategy, and build the sql --#}
     {% set incremental_predicates = config.get('incremental_predicates', none) %}
-    {% set strategy_arg_dict = ({'target_relation': target_relation, 'temp_relation': temp_relation, 'unique_key': unique_key, 'dest_columns': dest_columns, 'predicates': incremental_predicates }) %}
-    {% set build_sql = get_incremental_default_sql(strategy_arg_dict) %}
+    {% set strategy_arg_dict = ({
+        'target_relation': target_relation,
+        'temp_relation': temp_relation,
+        'unique_key': unique_key,
+        'dest_columns': dest_columns,
+        'incremental_predicates': incremental_predicates,
+        'predicates': incremental_predicates
+    }) %}
+    {% if incremental_strategy == 'merge' %}
+      {% set build_sql = get_incremental_merge_sql(strategy_arg_dict) %}
+    {% else %}
+      {% set build_sql = get_incremental_default_sql(strategy_arg_dict) %}
+    {% endif %}
 
   {% endif %}
 

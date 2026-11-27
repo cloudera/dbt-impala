@@ -50,7 +50,7 @@ demo_project:
 |Materialization: Incremental - Append with Partitions |Yes| Yes | No |
 |Materialization: Incremental - Insert+Overwrite |Yes| Yes | No |
 |Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes | No |
-|Materialization: Incremental - Merge|No| No | No |
+|Materialization: Incremental - Merge|No| Yes | Yes |
 |Materialization: Ephemeral|Yes| Yes | No |
 |Seeds|Yes| Yes | Yes |
 |Tests|Yes| Yes | Yes |
@@ -58,6 +58,8 @@ demo_project:
 |Documentation|Yes| Yes | Yes |
 |Authentication: LDAP|Yes| Yes | Yes |
 |Authentication: Kerberos|Yes| No | No |
+
+`Incremental - Merge` needs `unique_key`. Iceberg requires `table_type='iceberg'` and `tbl_properties="('format-version'='2')"` (Impala `MERGE INTO`). Kudu requires `stored_as='kudu'` and `primary_key` (Impala `UPSERT`). Plain Hive/Parquet tables are not supported by Impala for row-level upserts, so the base column stays No.
 
 ### Tests Coverage
 
@@ -71,6 +73,7 @@ demo_project:
 |Materialization: Incremental - Append with Partitions |Yes| Yes | No |
 |Materialization: Incremental - Insert+Overwrite |Yes| No | No |
 |Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes | No |
+|Materialization: Incremental - Merge|No| Yes | Yes |
 |Materialization: Ephemeral|Yes| Yes | No |
 |Seeds|Yes| Yes | Yes |
 |Tests|Yes| Yes | Yes |
